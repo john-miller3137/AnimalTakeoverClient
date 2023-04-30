@@ -59,7 +59,8 @@ public class HttpClient
     {
         Debug.Log(JsonUtility.ToJson(data));
         var request = new UnityWebRequest(path, type.ToString());
-        
+        Debug.Log(request.url);
+        request.certificateHandler = new BypassCertificate(); //for testing purposes bypass ssl certificate
         if (data != null)
         {
             var bodyRaw = Encoding.UTF8.GetBytes(JsonUtility.ToJson(data));
