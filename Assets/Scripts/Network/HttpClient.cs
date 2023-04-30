@@ -59,7 +59,7 @@ public class HttpClient
     {
         Debug.Log(JsonUtility.ToJson(data));
         var request = new UnityWebRequest(path, type.ToString());
-
+        
         if (data != null)
         {
             var bodyRaw = Encoding.UTF8.GetBytes(JsonUtility.ToJson(data));
