@@ -6,6 +6,8 @@ using Riptide.Transports.Udp;
 using System;
 using Network;
 using SharedLibrary;
+using System.Threading;
+using System.Threading.Tasks;
 
 public class NetworkManager : MonoBehaviour
 {
@@ -14,7 +16,16 @@ public class NetworkManager : MonoBehaviour
     public static Client MainClient { get; set; }
     private static NetworkManager _singleton;
     
-    
+    public string Ip
+    {
+        get { return ip; }
+        set { ip = value; }
+    }
+    public ushort Port
+    {
+        get { return port; }
+        set { port = value; }
+    }
     public static NetworkManager Singleton
     {
         get => _singleton;
@@ -39,12 +50,13 @@ public class NetworkManager : MonoBehaviour
         RiptideLogger.Initialize(Debug.Log, true);
         MainClient = new Client(new UdpClient(SocketMode.IPv4Only));
     }
-    public void ConnectClient()
+    public async void StartMatchmaking()
     {
         MainClient.Connect($"{ip}:{port}");
-
+        await WaitForConnection();
+        SendTokenAndKey();
     }
-    public void DoSomething()
+    public void SendTokenAndKey()
     {
         MainClient.Send(Message.Create(MessageSendMode.Unreliable, (ushort)MessageResponseCodes.SendToken).AddString(MessageHandlers.Key).AddString(InputLogic.Token));
     }
@@ -57,5 +69,19 @@ public class NetworkManager : MonoBehaviour
         MainClient.Disconnect();
     }
 
-    
+    async Task WaitForConnection()
+    {
+        CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        while (!MainClient.IsConnected)
+        {
+            try
+            {
+                await Task.Delay(1000, cts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                throw new TimeoutException("Connection timed out.");
+            }
+        }
+    }
 }
