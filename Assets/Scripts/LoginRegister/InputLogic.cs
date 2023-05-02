@@ -55,6 +55,7 @@ public class InputLogic : MonoBehaviour
 
     public async void OnLogin()
     {
+        if (_username == null || _password == null) return;
         AuthenticationRequest ar = new AuthenticationRequest();
         ar.Username = _username;
         ar.Password = _password;
@@ -69,7 +70,7 @@ public class InputLogic : MonoBehaviour
             Debug.Log(Token);
             if(Token.Length == 16)
             {
-                //HideUI();
+                HideUI();
             }
             if (JsonConvert.DeserializeObject<AuthenticationResponse>(HttpClient.postResponse).Token == "Success")
             {
@@ -80,6 +81,7 @@ public class InputLogic : MonoBehaviour
 
     public async void OnRegister()
     {
+        if (_username == null || _password == null) return;
         AuthenticationRequest ar = new AuthenticationRequest();
         ar.Username = _username;
         ar.Password = _password;
