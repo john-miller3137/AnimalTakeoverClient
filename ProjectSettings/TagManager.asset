@@ -11,9 +11,9 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
-  - 
+  - PostProcessing
+  - Lights
+  - Animals
   - 
   - 
   - 
@@ -40,4 +40,19 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Background
+    uniqueID: 3382480967
+    locked: 0
+  - name: Lights
+    uniqueID: 4185118391
+    locked: 0
+  - name: Particles
+    uniqueID: 2509898945
+    locked: 0
+  - name: Animals
+    uniqueID: 2613795893
+    locked: 0
+  - name: Hats
+    uniqueID: 3416173545
     locked: 0

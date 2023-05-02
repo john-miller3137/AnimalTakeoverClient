@@ -52,7 +52,10 @@ public class NetworkManager : MonoBehaviour
     }
     public async void StartMatchmaking()
     {
-        MainClient.Connect($"{ip}:{port}");
+        if (MainClient.IsNotConnected)
+        {
+            MainClient.Connect($"{ip}:{port}");
+        }
         await WaitForConnection();
         SendTokenAndKey();
     }
