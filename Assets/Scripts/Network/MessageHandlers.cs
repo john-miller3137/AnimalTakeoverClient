@@ -24,5 +24,10 @@ namespace Network
             msg.AddString(Key).AddString(InputLogic.Token);
             NetworkManager.MainClient.Send(msg);
         }
+        [MessageHandler((ushort)MessageResponseCodes.StartTurnSignal)]
+        private static void StartGame(Message message)
+        {
+            InputLogic.LoadGameScene1();
+        }
     }
 }

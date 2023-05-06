@@ -6,6 +6,7 @@ using SharedLibrary.Requests;
 using SharedLibrary.Responses;
 using Newtonsoft.Json;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class InputLogic : MonoBehaviour
 {
@@ -119,5 +120,9 @@ public class InputLogic : MonoBehaviour
             requestUrl = domainUrl;
             localhostButtonText.GetComponent<Text>().text = "Localhost";
         }
+    }
+    public static void LoadGameScene1()
+    {
+        SceneManager.LoadScene("GameScene1", LoadSceneMode.Single);
     }
 }
