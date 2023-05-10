@@ -45,7 +45,7 @@ public class ExplosionEffect : MonoBehaviour
 
         }
 
-        worldLight.intensity = 1.1f;
+        worldLight.intensity = 1f;
         yield return null;
         
     }

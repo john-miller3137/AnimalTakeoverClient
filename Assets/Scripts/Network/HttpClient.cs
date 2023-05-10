@@ -57,13 +57,12 @@ public class HttpClient
     }
     private static UnityWebRequest CreateRequest(string path, RequestType type = RequestType.GET, object data = null)
     {
-        Debug.Log(JsonUtility.ToJson(data));
         var request = new UnityWebRequest(path, type.ToString());
         Debug.Log(request.url);
         request.certificateHandler = new BypassCertificate(); //for testing purposes bypass ssl certificate
         if (data != null)
         {
-            var bodyRaw = Encoding.UTF8.GetBytes(JsonUtility.ToJson(data));
+            var bodyRaw = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data));
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             // Disable Nagle's algorithm
             if (request.uploadHandler != null)

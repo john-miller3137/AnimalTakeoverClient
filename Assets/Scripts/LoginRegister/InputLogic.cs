@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using Network;
 using UnityEngine;
 using SharedLibrary.Requests;
-using SharedLibrary.Responses;
 using Newtonsoft.Json;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -18,8 +18,8 @@ public class InputLogic : MonoBehaviour
     private static string _token;
     private bool localhost = true;
     private NetworkManager networkManager;
-    [SerializeField] private GameObject inputLogic, localhostButtonText, loginUI;
-
+    [SerializeField] private GameObject inputLogic, localhostButtonText, loginUI, findGameButton;
+    [SerializeField] private GameObject loginDisplay;
     public static string Token
     {
         get { return _token; }
@@ -36,6 +36,12 @@ public class InputLogic : MonoBehaviour
             networkManager = inputLogic.GetComponent<NetworkManager>();
         }
         requestUrl = domainUrl;
+        findGameButton.SetActive(false);
+        if(!SceneManager.GetSceneByName("GameScene1").isLoaded)
+        {
+            SceneManager.LoadSceneAsync("GameScene1", LoadSceneMode.Additive);
+        }
+        
     }
 
     // Update is called once per frame
@@ -72,6 +78,7 @@ public class InputLogic : MonoBehaviour
             if(Token.Length == 16)
             {
                 HideUI();
+                findGameButton.SetActive(true);
             }
             if (JsonConvert.DeserializeObject<AuthenticationResponse>(HttpClient.postResponse).Token == "Success")
             {
@@ -121,8 +128,9 @@ public class InputLogic : MonoBehaviour
             localhostButtonText.GetComponent<Text>().text = "Localhost";
         }
     }
-    public static void LoadGameScene1()
+    public void LoadGameScene1()
     {
-        SceneManager.LoadScene("GameScene1", LoadSceneMode.Single);
+       // loginDisplay.SetActive(false);
+        //SceneManager.UnloadSceneAsync("LoginRegisterScene");
     }
 }
