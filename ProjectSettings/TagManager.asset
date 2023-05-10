@@ -3,7 +3,9 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - ParticleBorder
+  - LoginDisplay
   layers:
   - Default
   - TransparentFX
@@ -55,4 +57,19 @@ TagManager:
     locked: 0
   - name: Hats
     uniqueID: 3416173545
+    locked: 0
+  - name: HealthHolder
+    uniqueID: 235858859
+    locked: 0
+  - name: HealthHeads
+    uniqueID: 3306169219
+    locked: 0
+  - name: HandHolder
+    uniqueID: 430766835
+    locked: 0
+  - name: Cards
+    uniqueID: 3198895037
+    locked: 0
+  - name: Transition
+    uniqueID: 817017845
     locked: 0

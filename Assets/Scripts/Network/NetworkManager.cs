@@ -13,7 +13,7 @@ public class NetworkManager : MonoBehaviour
 {
     [SerializeField] private string ip;
     [SerializeField] private ushort port;
-    public static Client MainClient { get; set; }
+    public Client MainClient { get; set; }
     private static NetworkManager _singleton;
     
     public string Ip
@@ -57,7 +57,9 @@ public class NetworkManager : MonoBehaviour
             MainClient.Connect($"{ip}:{port}");
         }
         await WaitForConnection();
+        MainClient.Connection.CanTimeout = false;
         SendTokenAndKey();
+        
     }
     public void SendTokenAndKey()
     {

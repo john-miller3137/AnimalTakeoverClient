@@ -4,67 +4,98 @@ using UnityEngine.Rendering.Universal;
 
 public class AttacksController : MonoBehaviour
 {
-    [SerializeField] private GameObject Camera, WorldLight, FireworkParticlePrefab, testObject;
-    private float worldLightIntensity_Default = 1.1f;
+    private static AttacksController instance;
+    public static AttacksController Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindObjectOfType<AttacksController>();
+                if (instance == null)
+                {
+                    GameObject go = new GameObject("AttacksController");
+                    instance = go.AddComponent<AttacksController>();
+                }
+            }
+            return instance;
+        }
+    }
+
+    [SerializeField] private GameObject Camera, WorldLight, FireworkParticlePrefab, testObject, testTarget, a0, a1, a2, a3, a4, a5;
+    [SerializeField] private GameObject FireAttackPrefab;
+    private float worldLightIntensity_Default = 1f;
     private float worldLightIntensity_Decrease = 0.2f;
     private Light2D worldLight;
-    
+    private CameraShake _cameraShake;
+    private SpriteRenderer sr0, sr1, sr2, sr3, sr4, sr5;
+
+    private const float maxFireballScale = 0.6f;
 
 
     private void Start()
     {
+        sr0 = a0.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        sr1 = a1.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        sr2 = a2.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        sr3 = a3.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        sr4 = a4.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        sr5 = a5.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        if (Camera != null) _cameraShake = Camera.GetComponent<CameraShake>();
         if (WorldLight != null) worldLight = WorldLight.GetComponent<Light2D>();
-        if(testObject != null)
-        {
-
-        }
+        
     }
 
-    private IEnumerator MoveToPosition(GameObject gameObject, Vector3 targetPosition, float duration)
+    private IEnumerator MoveToPosition(GameObject animal, Vector3 targetPosition, float duration)
     {
         float elapsedTime = 0;
-        Vector3 startingPos = gameObject.transform.position;
+        Vector3 startingPos = animal.transform.position;
 
         while (elapsedTime < duration)
         {
-            gameObject.transform.position = Vector3.Lerp(startingPos, targetPosition, (elapsedTime / duration));
+            animal.transform.position = Vector3.Lerp(startingPos, targetPosition, (elapsedTime / duration));
             elapsedTime += Time.deltaTime;
             yield return null;
         }
 
         gameObject.transform.position = targetPosition;
+        _cameraShake.Shake();
+        
+        yield return null;
     }
 
-    public IEnumerator ScaleOverTime(GameObject gameObject, float finalScaleFactor, float duration)
+    public IEnumerator ScaleOverTime(GameObject animal,float finalScaleFactor, float duration)
     {
         float elapsedTime = 0f;
-        Vector3 initialScale = gameObject.transform.localScale;
+        Vector3 initialScale = animal.transform.localScale;
         Vector3 finalScale = Vector3.one * finalScaleFactor;
-        Light2D worldLight = WorldLight.GetComponent<Light2D>();
 
         while (elapsedTime < duration)
         {
             float t = elapsedTime / duration;
             worldLight.intensity = worldLightIntensity_Default - worldLightIntensity_Decrease * (t);
-            gameObject.transform.localScale = Vector3.Lerp(initialScale, finalScale, t);
+            animal.transform.localScale = Vector3.Lerp(initialScale, finalScale, t);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
 
         transform.localScale = finalScale;
+        yield return null;
         //yield return LaunchObject(targetPosition, launchSpeed);
+        
     }
 
-    public IEnumerator LaunchObject(GameObject gameObject, Vector3 targetPosition, float launchSpeed)
+    public IEnumerator LaunchObject(GameObject animal, Vector3 targetPosition, float launchSpeed)
     {
-        Vector3 direction = (targetPosition - gameObject.transform.position).normalized;
-        while (Vector3.Distance(gameObject.transform.position, targetPosition) > 1f)
+        Vector3 direction = (targetPosition - animal.transform.position).normalized;
+        while (Vector3.Distance(animal.transform.position, targetPosition) > 1f)
         {
             transform.position += direction * launchSpeed * Time.deltaTime;
             yield return null;
         }
-        gameObject.transform.position = targetPosition;
+        animal.transform.position = targetPosition;
         Camera.GetComponent<CameraShake>().Shake();
+        yield return null;
         //yield return this.GetComponent<ExplosionEffect>().ExplodeCoroutine();
     }
 
@@ -98,16 +129,134 @@ public class AttacksController : MonoBehaviour
 
     }
 
-    public IEnumerator FlashRed(GameObject gameObject)
+    public IEnumerator FlashRed(GameObject animal)
     {
-        if (gameObject != null) {
-            SpriteRenderer sr = gameObject.GetComponent<SpriteRenderer>();
-            yield return new WaitForSeconds(1.5f);
+
+        SpriteRenderer sr = null;
+        if (animal == a0)
+        {
+            sr = sr0;
+        } else if (animal == a1)
+        {
+            sr = sr1;
+        }else if (animal == a2)
+        {
+            sr = sr2;
+        }else if (animal == a3)
+        {
+            sr = sr3;
+        }else if (animal == a4)
+        {
+            sr = sr4;
+        }else if (animal == a5)
+        {
+            sr = sr5;
+        }
+
+        if (sr != null)
+        {
             sr.color = Color.red;
             yield return new WaitForSeconds(0.05f);
             sr.color = Color.white;
         }
+            
+
+    }
+
+    private IEnumerator DoFireAttack(GameObject animal, GameObject target)
+    {
+        Vector3 animalPos = animal.transform.position;
+        Vector3 targetPos;
+        if (target == null)
+        {
+            targetPos = new Vector3(animalPos.x, animalPos.y + 20, 0);
+        }
+        else
+        {
+            targetPos = target.transform.position;
+        }
+        
+        Vector3 ballSpawnPos;
+        if (animalPos.y < targetPos.y)
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y+1, 0);
+        }
+        else
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y-1, 0);
+        }
+        GameObject fireball = Instantiate(FireAttackPrefab, ballSpawnPos, Quaternion.identity);
+
+        fireball.transform.localScale = new Vector3(0, 0, 0);
+        yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
+        yield return MoveToPosition(fireball, targetPos, .7f);
+        yield return StartCoroutine(FlashRed(target));
+        yield return StartCoroutine(ExplodeCoroutine(fireball, 20f));
+        yield return null;
+    }
+
+    public void DoAttack(int cardId, int animalId, int targetId)
+    {
+        switch (cardId)
+        {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+                break;
+            case 11:
+                FireAttack(animalId, targetId);
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void FireAttack(int animalId, int targetId)
+    {
+        if (animalId == targetId) return;
+        GameObject animal, target;
+        animal = GetAnimal(animalId);
+        if (targetId == -1)
+        {
+            target = null;
+        }
+        else
+        {
+            target = GetAnimal(targetId);
+        }
+       
+        
+        StartCoroutine(DoFireAttack(animal, target));
+
         
     }
 
+    private GameObject GetAnimal(int animalId)
+    {
+        switch (animalId)
+        {
+            case 0:
+                return a0;
+            case 1:
+                return a1;
+            case 2:
+                return a2;
+            case 3:
+                return a3;
+            case 4:
+                return a4;
+            case 5:
+                return a5;
+            default:
+                return null;
+        }
+    }
 }
