@@ -52,6 +52,10 @@ public class NetworkManager : MonoBehaviour
     }
     public async void StartMatchmaking()
     {
+        if (MainClient.IsConnected)
+        {
+            MainClient.Disconnect();
+        }
         if (MainClient.IsNotConnected)
         {
             MainClient.Connect($"{ip}:{port}");

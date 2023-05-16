@@ -38,22 +38,65 @@ public class MoveController : MonoBehaviour
         switch (animalId)
         {
             case 0:
-                animal = a0;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    animal = a0;
+                }
+                else
+                {
+                    animal = a3;
+                }
+                
                 break;
             case 1:
-                animal = a1;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    animal = a1;
+                }
+                else
+                {
+                    animal = a4;
+                }
                 break;
             case 2:
-                animal = a2;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    animal = a2;
+                }
+                else
+                {
+                    animal = a5;
+                }
                 break;
             case 3:
-                animal = a3;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    animal = a3;
+                }
+                else
+                {
+                    animal = a0;
+                }
                 break;
             case 4:
-                animal = a4;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    animal = a4;
+                }
+                else
+                {
+                    animal = a1;
+                }
                 break;
             case 5:
-                animal = a5;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    animal = a5;
+                }
+                else
+                {
+                    animal = a2;
+                }
                 break;
             default:
                 animal = null;
