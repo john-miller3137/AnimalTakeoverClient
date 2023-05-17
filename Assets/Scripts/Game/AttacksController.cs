@@ -102,24 +102,22 @@ public class AttacksController : MonoBehaviour
     public IEnumerator ExplodeCoroutine(GameObject gameObjectToDestroy, float explosionForce)
     {
         Vector3 explosionPosition = gameObjectToDestroy.transform.position;
-        if(gameObjectToDestroy != null)
-        {
-            Destroy(gameObjectToDestroy);
-        }
-        for (int i = 0; i < 12; i++)
+        Destroy(gameObjectToDestroy);
+        
+        for (int i = 0; i < 6; i++)
         {
             Vector3 direction = Random.insideUnitSphere;
             GameObject particle = Instantiate(FireworkParticlePrefab, explosionPosition, Quaternion.identity);
             Rigidbody2D rb2D = particle.GetComponent<Rigidbody2D>();
             rb2D.AddForce(direction * explosionForce, ForceMode2D.Impulse);
             Light2D light2D = particle.GetComponent<Light2D>();
-            if (i < 6)
+            if (i < 3)
             {
                 light2D.color = new Color(light2D.color.r, light2D.color.g, light2D.color.b, 1);
             }
             else
             {
-                light2D.color = new Color(Color.magenta.r, Color.magenta.g, Color.magenta.b, Color.magenta.a);
+                light2D.color = new Color(Color.yellow.r, Color.yellow.g, Color.yellow.b, 1);
 
             }
         }
@@ -153,13 +151,11 @@ public class AttacksController : MonoBehaviour
             sr = sr5;
         }
 
-        if (sr != null)
-        {
-            sr.color = Color.red;
-            yield return new WaitForSeconds(0.05f);
-            sr.color = Color.white;
-        }
-            
+        
+        sr.color = Color.red;
+        yield return new WaitForSeconds(0.05f);
+        sr.color = Color.white;
+
 
     }
 
@@ -191,7 +187,7 @@ public class AttacksController : MonoBehaviour
         yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
         yield return MoveToPosition(fireball, targetPos, .7f);
         yield return StartCoroutine(FlashRed(target));
-        yield return StartCoroutine(ExplodeCoroutine(fireball, 20f));
+        yield return StartCoroutine(ExplodeCoroutine(fireball, 12f));
         yield return null;
     }
 
@@ -244,17 +240,61 @@ public class AttacksController : MonoBehaviour
         switch (animalId)
         {
             case 0:
-                return a0;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    return a0;
+                }
+                else
+                {
+                    return a3;
+                }
+                
+                
             case 1:
-                return a1;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    return a1;
+                }
+                else
+                {
+                    return a4;
+                }
             case 2:
-                return a2;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    return a2;
+                }
+                else
+                {
+                    return a5;
+                }
             case 3:
-                return a3;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    return a3;
+                }
+                else
+                {
+                    return a0;
+                }
             case 4:
-                return a4;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    return a4;
+                }
+                else
+                {
+                    return a1;
+                }
             case 5:
-                return a5;
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    return a5;
+                }
+                else
+                {
+                    return a2;
+                }
             default:
                 return null;
         }

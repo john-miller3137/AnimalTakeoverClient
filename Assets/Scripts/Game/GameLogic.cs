@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Game;
 using Network;
 using SharedLibrary.Objects;
 using Unity.VisualScripting;
@@ -44,17 +45,22 @@ public class GameLogic : MonoBehaviour
     public GameCard gc0, gc1, gc2, gc3;
     private int selectedCard = -1;
     public GameObject myAnimal0, myAnimal1, myAnimal2, enemyAnimal0, enemyAnimal1, enemyAnimal2;
-    public static Vector3[] animalInfo = new Vector3[max_animals];
+    public Vector3[] animalInfo = new Vector3[max_animals];
     private bool isPlayerOne;
     private const int max_animals = 6;
     private const int max_x = 8;
     private const int max_y = 16;
     private const float vert_offset = -6;
     private const float hor_offset = -4;
+    private const int max_cards = 4;
     private BoxCollider2D bc0, bc1, bc2, bc3, bc4, bc5, cbc0,cbc1,cbc2,cbc3;
-    private SpriteRenderer csr0, csr1, csr2, csr3;
+    private SpriteRenderer csr0, csr1, csr2, csr3, asr0, asr1, asr2, asr3, asr4, asr5;
     private GameCardInfo gci0, gci1, gci2, gci3;
+    private Transform selectedCardPos;
     private bool isLoaded = false;
+
+    [SerializeField]
+    private Sprite[] AnimalSpriteArray;
 
     public bool IsPlayerOne
     {
@@ -80,6 +86,12 @@ public class GameLogic : MonoBehaviour
         csr1 = card1.GetComponent<SpriteRenderer>();
         csr2 = card2.GetComponent<SpriteRenderer>();
         csr3 = card3.GetComponent<SpriteRenderer>();
+        asr0 = myAnimal0.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        asr1 = myAnimal1.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        asr2 = myAnimal2.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        asr3 = enemyAnimal0.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        asr4 = enemyAnimal1.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        asr5 = enemyAnimal2.transform.GetChild(1).GetComponent<SpriteRenderer>();
         gci0 = card0.GetComponent<GameCardInfo>();
         gci1 = card1.GetComponent<GameCardInfo>();
         gci2 = card2.GetComponent<GameCardInfo>();
@@ -118,7 +130,15 @@ public class GameLogic : MonoBehaviour
                     if (selectedCard >= 0)
                     {
                         Debug.Log("animal touched;");
-                        CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 0);
+                        if (IsPlayerOne)
+                        {
+                            CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 0, (byte) selectedCard);
+                        }
+                        else
+                        {
+                            CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 3, (byte) selectedCard);
+                        }
+                        
                     }
                     
                 }
@@ -126,14 +146,29 @@ public class GameLogic : MonoBehaviour
                 {
                     if (selectedCard >= 0)
                     {
-                        CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 1);
+                        Debug.Log("animal touched;");
+                        if (IsPlayerOne)
+                        {
+                            CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 1, (byte) selectedCard);
+                        }
+                        else
+                        {
+                            CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 4, (byte) selectedCard);
+                        }
                     }
                 }
                 else if (tc == bc2)
                 {
                     if (selectedCard >= 0)
                     {
-                        CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 2);
+                        if (IsPlayerOne)
+                        {
+                            CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 2, (byte) selectedCard);
+                        }
+                        else
+                        {
+                            CardController.Instance.PlayCard(MessageHandlers.RoomId, GetSelectedCardInfo().Id, 5, (byte) selectedCard);
+                        }
                     }
                 }
                 else if(tc == bc3)
@@ -169,31 +204,31 @@ public class GameLogic : MonoBehaviour
         yield return DeselectCard();
         yield return SelectCard(id);
     }
-    private IEnumerator DeselectCard()
+    public IEnumerator DeselectCard()
     {
         GameObject card;
-        switch (selectedCard)
+        for (int i = 0; i < max_cards; i++)
         {
-            case 0:
-                card = card0;
-                StartCoroutine(LerpCardTransform(card.transform, bcard0.transform));
-                break;
-            case 1:
-                card = card1;
-                StartCoroutine(LerpCardTransform(card.transform, bcard1.transform));
-                break;
-            case 2:
-                card = card2;
-                StartCoroutine(LerpCardTransform(card.transform, bcard2.transform));
-                break;
-            case 3:
-                card = card3;
-                StartCoroutine(LerpCardTransform(card.transform, bcard3.transform));
-                break;
-            default:
-                card = null;
-                break;
+            if (CardController.Instance.gameCardArray[i].name == $"Card{selectedCard}")
+            {
+                switch (i)
+                {
+                    case 0:
+                        StartCoroutine(LerpCardTransform(CardController.Instance.gameCardArray[i].transform, bcard0.transform));
+                        break;
+                    case 1:
+                        StartCoroutine(LerpCardTransform(CardController.Instance.gameCardArray[i].transform, bcard1.transform));
+                        break;
+                    case 2:
+                        StartCoroutine(LerpCardTransform(CardController.Instance.gameCardArray[i].transform, bcard2.transform));
+                        break;
+                    case 3:
+                        StartCoroutine(LerpCardTransform(CardController.Instance.gameCardArray[i].transform, bcard3.transform));
+                        break;
+                }
+            }
         }
+        
         switch (selectedCard)
         {
             case 0:
@@ -219,28 +254,33 @@ public class GameLogic : MonoBehaviour
     private IEnumerator SelectCard(int i)
     {
         GameObject card;
-
+        bool cardInitialized = false;
         selectedCard = i;
+        
         switch (i)
         {
             case 0:
                 card = card0;
+                cardInitialized = true;
                 break;
             case 1:
                 card = card1;
+                cardInitialized = true;
                 break;
             case 2:
                 card = card2;
+                cardInitialized = true;
                 break;
             case 3:
                 card = card3;
+                cardInitialized = true;
                 break;
             default:
                 card = null;
                 break;
         }
 
-        if (card != null)
+        if (cardInitialized == true)
         {
             StartCoroutine(LerpCardTransform(card.transform, zoomCard.transform));
         }
@@ -266,7 +306,7 @@ public class GameLogic : MonoBehaviour
         yield return null;
 
     }
-    private IEnumerator LerpCardTransform(Transform cardTransform, Transform targetTransform)
+    public IEnumerator LerpCardTransform(Transform cardTransform, Transform targetTransform)
     {
         float elapsedTime = 0f;
         float duration = .2f;
@@ -318,6 +358,30 @@ public class GameLogic : MonoBehaviour
             Debug.Log("animals null");
         }
     }
+
+    private void LoadAnimalSprites()
+    {
+        if (IsPlayerOne)
+        {
+            asr0.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2];
+            asr1.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2];
+            asr2.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2];
+            asr3.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2+1];
+            asr4.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2+1];
+            asr5.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2+1];
+        }
+        else
+        {
+            asr0.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2];
+            asr1.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2];
+            asr2.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2];
+            asr3.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2+1];
+            asr4.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2+1];
+            asr5.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2+1];
+        }
+        
+        
+    }
     //each byte represents id, x, or y locaiton p1a0id = player 1 animal 0 id
     public void StartTransition(byte p1a0id, byte p1a0x, byte p1a0y, byte p1a1id, byte p1a1x, byte p1a1y, byte p1a2id, byte p1a2x, byte p1a2y, byte p2a0id, byte p2a0x, byte p2a0y, byte p2a1id, byte p2a1x, byte p2a1y, byte p2a2id, byte p2a2x, byte p2a2y)
     {    
@@ -328,6 +392,8 @@ public class GameLogic : MonoBehaviour
         animalInfo[4] = new Vector3((float)p2a1id, (float)p2a1x, (float)p2a1y);
         animalInfo[5] = new Vector3((float)p2a2id, (float)p2a2x, (float)p2a2y);
         MoveToStartingPosition();
+        LoadAnimalSprites();
+        HealthController.Instance.InitializeHeadSprites();
         if (!isLoaded)
         {
             isLoaded = true;

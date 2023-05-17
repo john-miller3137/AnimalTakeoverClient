@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Network;
 using Riptide;
 using SharedLibrary;
@@ -30,16 +32,23 @@ public class CardController : MonoBehaviour
     [SerializeField] private GameObject myAnimal0, myAnimal1, myAnimal2, enemyAnimal0, enemyAnimal1, enemyAnimal2;
     public List<GameObject> myAnimals, enemyAnimals;
     [SerializeField] private List<Sprite> cardSprites;
-
-
+    public int[] gameCards;
+    object lockObject = new object();
+    private bool _cardsAreShifting = false;
+    private const int MaxCards = 4;
+    private int _cardCount;
+    public GameObject[] gameCardArray;
     private void Awake()
     {
+        gameCardArray = new GameObject[4];
+        gameCards = new int[4];
         myAnimals = new List<GameObject>();
         enemyAnimals = new List<GameObject>();
     }
 
     void Start()
     {
+        _cardCount = 4;
         if (myAnimal0 != null && myAnimal1 != null && myAnimal2 != null)
         {
             myAnimals.Add(myAnimal0);
@@ -52,6 +61,11 @@ public class CardController : MonoBehaviour
             enemyAnimals.Add(enemyAnimal1);
             enemyAnimals.Add(enemyAnimal2);
         }
+
+        gameCardArray[0] = GameLogic.Instance.card0;
+        gameCardArray[1] = GameLogic.Instance.card1;
+        gameCardArray[2] = GameLogic.Instance.card2;
+        gameCardArray[3] = GameLogic.Instance.card3;
     }
 
     void Update()
@@ -61,7 +75,7 @@ public class CardController : MonoBehaviour
 
     public void UpdateCard(GameCard gameCard, GameObject card)
     {
-        if (card != null && gameCard != null)
+        if (gameCard != null)
         {
             SpriteRenderer spriteRenderer = card.GetComponent<SpriteRenderer>();
             spriteRenderer.sprite = cardSprites[gameCard.Id];
@@ -73,40 +87,272 @@ public class CardController : MonoBehaviour
             gameCardInfo.Type = gameCard.Type;
         }
     }
-    public void HandleDrawCard(int gameCardId)
+
+    private IEnumerator IncrementCardcount()
     {
-        GameCard gameCard = CardInfo.idToCardMap[gameCardId];
-        if(!GameLogic.Instance.card0.activeSelf)
+        _cardCount++;
+        Debug.Log("Card Count incremented to " + _cardCount);
+        yield return null;
+    }
+    private IEnumerator MoveDrawnCard(GameObject emptySlot)
+    {
+        Debug.Log("Cardcount = " +_cardCount);
+        lock (lockObject)
         {
-            UpdateCard(gameCard, GameLogic.Instance.card0);
-            GameLogic.Instance.card0.SetActive(true);
-        } else if(!GameLogic.Instance.card1.activeSelf)
-        {
-            UpdateCard(gameCard, GameLogic.Instance.card1);
-            GameLogic.Instance.card1.SetActive(true);
+            switch (_cardCount)
+            {
+                case 0:
+                    break;
+                case 1:
+                    StartCoroutine(GameLogic.Instance.LerpCardTransform(emptySlot.transform, GameLogic.Instance.bcard0.transform));
+                    break;
+                case 2:
+                    StartCoroutine(GameLogic.Instance.LerpCardTransform(emptySlot.transform, GameLogic.Instance.bcard1.transform));
+                    break;
+                case 3:
+                    StartCoroutine(GameLogic.Instance.LerpCardTransform(emptySlot.transform, GameLogic.Instance.bcard2.transform));
+                    break;
+                case 4:
+                    StartCoroutine(GameLogic.Instance.LerpCardTransform(emptySlot.transform, GameLogic.Instance.bcard3.transform));
+                    break;
+                default :
+                    break;
+            }
         }
-        else if (!GameLogic.Instance.card2.activeSelf)
-        {
-            UpdateCard(gameCard, GameLogic.Instance.card2);
-            GameLogic.Instance.card2.SetActive(true);
-        }
-        else if (!GameLogic.Instance.card3.activeSelf)
-        {
-            UpdateCard(gameCard, GameLogic.Instance.card3);
-            GameLogic.Instance.card3.SetActive(true);
-        } else
-        {
-            Debug.Log("Cant draw card");
-        }
+
+        yield return null;
     }
 
-    public void PlayCard(int roomId, int cardId, int animalId)
+    public void DoDrawCard(int gameCardId, byte handId)
+    {
+        StartCoroutine(HandleDrawCard(gameCardId, handId));
+        
+    }
+    public IEnumerator HandleDrawCard(int gameCardId, byte handId)
+    {
+        
+            
+            GameCard gameCard = CardInfo.idToCardMap[gameCardId];
+            
+            if (!GameLogic.Instance.card0.activeSelf)
+            {
+                lock (lockObject)
+                {
+                    // gameCards keeps track of location of card either 0 1 2 3
+                    yield return IncrementCardcount();
+                
+                        GameLogic.Instance.card0.GetComponent<SpriteRenderer>().sortingOrder = 4;
+                StartCoroutine(GameLogic.Instance.DeselectCard());
+                UpdateCard(gameCard, GameLogic.Instance.card0);
+                GameLogic.Instance.card0.SetActive(true);
+                //yield return MoveDrawnCard(GameLogic.Instance.card0);
+                yield return ShiftCards();
+                }
+            } else if(!GameLogic.Instance.card1.activeSelf)
+            {
+                lock (lockObject)
+                {
+                    yield return IncrementCardcount();
+                    GameLogic.Instance.card1.GetComponent<SpriteRenderer>().sortingOrder = 4;
+                    StartCoroutine(GameLogic.Instance.DeselectCard());
+                    UpdateCard(gameCard, GameLogic.Instance.card1);
+                    GameLogic.Instance.card1.SetActive(true);
+                   // yield return MoveDrawnCard(GameLogic.Instance.card1);
+                    yield return ShiftCards();
+                }
+            }
+            else if (!GameLogic.Instance.card2.activeSelf)
+            {
+                lock (lockObject)
+                {
+                    yield return IncrementCardcount();
+                
+                    GameLogic.Instance.card2.GetComponent<SpriteRenderer>().sortingOrder = 4;
+                StartCoroutine(GameLogic.Instance.DeselectCard());
+                UpdateCard(gameCard, GameLogic.Instance.card2);
+                GameLogic.Instance.card2.SetActive(true);
+                //yield return MoveDrawnCard(GameLogic.Instance.card2);
+                yield return ShiftCards();
+                }
+            }
+            else if (!GameLogic.Instance.card3.activeSelf)
+            {
+                lock (lockObject)
+                {
+                    yield return IncrementCardcount();
+                
+                    GameLogic.Instance.card3.GetComponent<SpriteRenderer>().sortingOrder = 4;
+                gameCards[3] = handId;
+                    GameLogic.Instance.DeselectCard();
+                    UpdateCard(gameCard, GameLogic.Instance.card3);
+                    GameLogic.Instance.card3.SetActive(true);
+                    //yield return MoveDrawnCard(GameLogic.Instance.card3);
+                    yield return ShiftCards();
+                }
+            } else
+            {
+                Debug.Log("Cant draw card");
+            }
+             //               gameCardss   server
+            // 0 1 2 3  handid=gameId       0 1 2 3     0 1 2 3  
+            // 1 2 3 0          3 0 1 2     4 1 2 3
+            // 2 3 0 1           2 3 0 1     4 5 2 3
+                // foreach(int in gamecards) if int == 0 card0 = cardi
+                yield return null;
+    }
+
+    public void PlayCard(int roomId, int cardId, int animalId, byte handId)
     {
         Message message = Message.Create(MessageSendMode.Reliable, (ushort)MessageResponseCodes.CardPlayRequest);
         Debug.Log(cardId);
         message.AddString(MessageHandlers.Key);
-        message.AddInt(roomId).AddInt(cardId).AddInt(animalId);
+        message.AddInt(roomId).AddInt(cardId);
+        message.AddInt(animalId);
+        
+        message.AddByte(handId);
         NetworkManager.Singleton.MainClient.Send(message);
+    }
+
+    public void CallDiscardCard(byte handId)
+    {
+        StartCoroutine(DiscardCard(handId));
+    }
+
+    
+    private IEnumerator DiscardCard(byte handId)
+    {
+        
+            // Shift the cards here...
+            GameObject card1, card2, card3;
+            bool success;
+            GameObject temp;
+
+            for (int i = 0; i < MaxCards; i++)
+            {
+                if (gameCardArray[i].name == $"Card{handId}")
+                {
+                    switch (i)
+                    {
+                        case 0:
+                            lock (lockObject)
+                            {
+                                gameCardArray[i].SetActive(false);
+                                temp = gameCardArray[0];
+                                gameCardArray[0] = gameCardArray[1]; // 0 1 2 3 -> 1 2 3 0 
+                                gameCardArray[1] = gameCardArray[2];
+                                gameCardArray[2] = gameCardArray[3];
+                                gameCardArray[3] = temp;
+                                _cardsAreShifting = true;
+                                StartCoroutine(ShiftCards());
+                                _cardCount--;
+                            }
+
+                            break;
+                        case 1:
+                            gameCardArray[i].SetActive(false);
+                            //GameLogic.Instance.card1.transform.position = GameLogic.Instance.bcard3.transform.position;
+
+
+                            lock (lockObject)
+                            {
+                                temp = gameCardArray[1];
+                                gameCardArray[1] = gameCardArray[2];
+                                gameCardArray[2] = gameCardArray[3];
+                                gameCardArray[3] = temp;
+                                _cardsAreShifting = true;
+                                StartCoroutine(ShiftCards());
+                                _cardCount--;
+                            }
+
+                            break;
+                        case 2:
+                            gameCardArray[i].SetActive(false);
+                            //GameLogic.Instance.card2.transform.position = GameLogic.Instance.bcard3.transform.position;
+
+
+                            lock (lockObject)
+                            {
+                                temp = gameCardArray[2];
+                                gameCardArray[2] = gameCardArray[3];
+                                gameCardArray[3] = temp;
+                                _cardsAreShifting = true;
+                                StartCoroutine(ShiftCards());
+                                _cardCount--;
+                            }
+
+                            break;
+                        case 3:
+                            gameCardArray[i].SetActive(false);
+
+                            lock (lockObject)
+                            {
+                                _cardCount--;
+                            }
+
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            Debug.Log("Card Count decremented to " + _cardCount);
+            _cardsAreShifting = false;
+        yield return null;
+    }
+    
+    private static int SwitchAnimal(int animalId)
+    {
+        switch (animalId)
+        {
+            case 0:
+                return 3;
+            case 1:
+                return 4;
+            case 2:
+                return 5;
+            case 3:
+                return 0;
+            case 4 :
+                return 1;
+            case 5:
+                return 2;
+            default:
+                return -1;
+        }
+    }
+    
+    private IEnumerator ShiftCards()
+    {
+        Debug.Log($"Debug{gameCardArray[0].name} {gameCardArray[1].name} {gameCardArray[2].name} {gameCardArray[3].name} ");
+        if (gameCardArray[0].transform.position != GameLogic.Instance.bcard0.transform.position)
+        {
+            yield return GameLogic.Instance.LerpCardTransform(gameCardArray[0].transform,
+                GameLogic.Instance.bcard0.transform);
+            
+        }
+        gameCardArray[0].GetComponent<SpriteRenderer>().sortingOrder = 0;
+        if (gameCardArray[1].transform.position != GameLogic.Instance.bcard1.transform.position)
+        {
+            yield return GameLogic.Instance.LerpCardTransform(gameCardArray[1].transform,
+                GameLogic.Instance.bcard1.transform);
+           
+        }
+        gameCardArray[1].GetComponent<SpriteRenderer>().sortingOrder = 1;
+        if (gameCardArray[2].transform.position != GameLogic.Instance.bcard2.transform.position)
+        {
+            yield return GameLogic.Instance.LerpCardTransform(gameCardArray[2].transform,
+                GameLogic.Instance.bcard2.transform);
+            
+        }
+        gameCardArray[2].GetComponent<SpriteRenderer>().sortingOrder = 2;
+        if (gameCardArray[3].transform.position != GameLogic.Instance.bcard3.transform.position)
+        {
+            yield return GameLogic.Instance.LerpCardTransform(gameCardArray[3].transform,
+                GameLogic.Instance.bcard3.transform);
+            
+        }
+        gameCardArray[3].GetComponent<SpriteRenderer>().sortingOrder = 3;
+       
     }
     
 }
