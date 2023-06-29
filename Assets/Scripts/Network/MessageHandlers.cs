@@ -1,4 +1,5 @@
 
+using Game;
 using Riptide;
 using SharedLibrary;
 using SharedLibrary.Library;
@@ -52,6 +53,7 @@ namespace Network
         [MessageHandler((ushort)MessageResponseCodes.StartTranisitionSignal)]
         private static void StartTransition(Message message)
         {
+            (byte,byte)[,] gameBoard = new (byte,byte)[Constants.max_x, Constants.max_y];
             ushort client1Id = message.GetUShort();
             byte p1a0id = message.GetByte();
             byte p1a0x = message.GetByte();
@@ -71,13 +73,34 @@ namespace Network
             byte p2a2id = message.GetByte();
             byte p2a2x = message.GetByte();
             byte p2a2y = message.GetByte();
+            
+            
             Debug.Log(p1a1id + " " + p1a1x + " " + p1a1y);
             if (NetworkManager.Singleton.MainClient.Id == client1Id)
             {
                 Debug.Log("this is player 1");
                 GameLogic.Instance.IsPlayerOne = true;
             }
-            GameLogic.Instance.StartTransition(p1a0id, p1a0x, p1a0y, p1a1id, p1a1x, p1a1y, p1a2id, p1a2x, p1a2y, p2a0id, p2a0x, p2a0y, p2a1id, p2a1x, p2a1y, p2a2id, p2a2x, p2a2y);
+            for (int i = 0; i < Constants.max_x; i++)
+            {
+                for (int j = 0; j < Constants.max_y; j++)
+                {
+                    byte crystalKey = message.GetByte();
+                    byte crystalId = message.GetByte();
+                    if (GameLogic.Instance.IsPlayerOne)
+                    {
+                        gameBoard[i, j] = (crystalKey,crystalId);
+                    }
+                    else
+                    {
+                        int x = flipX(i);
+                        int y = flipY(j);
+                        gameBoard[x, y] = (crystalKey,crystalId);
+                    }
+                    
+                }
+            }
+            GameLogic.Instance.StartTransition(p1a0id, p1a0x, p1a0y, p1a1id, p1a1x, p1a1y, p1a2id, p1a2x, p1a2y, p2a0id, p2a0x, p2a0y, p2a1id, p2a1x, p2a1y, p2a2id, p2a2x, p2a2y,gameBoard);
         }
         
         [MessageHandler((ushort)MessageResponseCodes.StartTurnSignal)]
@@ -85,7 +108,7 @@ namespace Network
         {
             Debug.Log("Start turn");
         }
-
+        /*
         [MessageHandler((ushort)MessageResponseCodes.DrawHand)]
         private static void RecieveHand(Message message)
         {
@@ -113,9 +136,10 @@ namespace Network
         [MessageHandler((ushort)MessageResponseCodes.DrawCard)]
         private static void ReceiveCard(Message message)
         {
-            Debug.Log("Card drawn");
+            
             int cardId = message.GetInt();
             byte handId = message.GetByte();
+            Debug.Log("Card drawn" + cardId + " " + handId);
             CardController.Instance.DoDrawCard(cardId, handId);
         }
 
@@ -158,14 +182,14 @@ namespace Network
                 }
                 
             }
-
+            Debug.Log("PlayerId" + playerId);
             if (isPlayerOne && playerId == 1)
             {
-                Debug.Log("Player 1 discarding");
+                Debug.Log("Player 1 discarding " +cardId );
                 CardController.Instance.CallDiscardCard(handId);
             } else if (!isPlayerOne && playerId == 2)
             {
-                Debug.Log("Player 2 discarding");
+                Debug.Log("Player 2 discarding " + cardId);
                 CardController.Instance.CallDiscardCard(handId);
             }
 
@@ -177,8 +201,79 @@ namespace Network
             int cardId = message.GetInt();
             int animalId = message.GetInt();
             
+        }*/
+        [MessageHandler((ushort)MessageResponseCodes.SendHealthUpdate)]
+        private static void UpdateAnimalHealth(Message message)
+        {
+            int animalId = message.GetInt();
+            float ratio = message.GetFloat();
+            if (GameLogic.Instance.IsPlayerOne && animalId >=0 && animalId <3)
+            {
+                HealthController.Instance.UpdateAnimalHealth(animalId, ratio);
+            } else if (!GameLogic.Instance.IsPlayerOne && animalId >= 3 && animalId < 6)
+            {
+                HealthController.Instance.UpdateAnimalHealth(animalId, ratio);
+            } 
         }
-        
+        [MessageHandler((ushort)MessageResponseCodes.AnimalDeath)]
+        private static void HandleAnimalDeath(Message message)
+        {
+            int animalId = message.GetInt();
+            if (animalId >=0 && animalId <6)
+            {
+                HealthController.Instance.OnDeadAnimal(animalId);
+            }
+        }
+
+        [MessageHandler((ushort)MessageResponseCodes.SendGameBoard)]
+        private static void HandleGameBoardMessage(Message message)
+        {
+            for (int i = 0; i < Constants.max_x; i++)
+            {
+                for (int j = 0; j < Constants.max_y; j++)
+                {
+                    byte messageByte = message.GetByte();
+                }
+            }
+        }
+
+        [MessageHandler((ushort)MessageResponseCodes.AnimalMoveSignal)]
+        private static void HandleAnimalMove(Message message)
+        {
+            int animalId = message.GetInt();
+            int x = message.GetInt();
+            int y = message.GetInt();
+            if (GameLogic.Instance.IsPlayerOne)
+            {
+                MoveController.Instance.MoveAnimal(animalId, x+hor_offset, y + vert_offset);
+            }
+            else
+            {
+                MoveController.Instance.MoveAnimal(animalId, flipX(x)+hor_offset, flipY(y)+vert_offset);
+            }
+        }
+
+        [MessageHandler((ushort)MessageResponseCodes.PickupCrystal)]
+        private static void HandlePickupCrystal(Message message)
+        {
+            int animalId = message.GetInt();
+            byte crystalId = message.GetByte();
+            byte crystalKey = message.GetByte();
+            bool fullCrystal = message.GetBool();
+            int x = message.GetInt();
+            int y = message.GetInt();
+            if (GameLogic.Instance.IsPlayerOne)
+            {
+                Debug.Log("crystal picked up");
+                CrystalController.Instance.PickupCrystal(animalId, crystalId, crystalKey, fullCrystal, x, y);
+            }
+            else
+            {
+                Debug.Log("crystal picked up");
+                CrystalController.Instance.PickupCrystal(SwitchAnimal(animalId), crystalId, crystalKey, fullCrystal, flipX(x), flipY(y));
+            }
+           
+        }
         private static int flipX(int x)
         {
             return max_x - x;
@@ -188,7 +283,7 @@ namespace Network
             return max_y - y;
         }
 
-        private static int SwitchAnimal(int animalId)
+        public static int SwitchAnimal(int animalId)
         {
             switch (animalId)
             {
@@ -208,6 +303,8 @@ namespace Network
                     return -1;
             }
         }
+        
+        
 
         
     }

@@ -52,8 +52,17 @@ TagManager:
   - name: Particles
     uniqueID: 2509898945
     locked: 0
+  - name: MoveTiles
+    uniqueID: 2179755173
+    locked: 0
+  - name: Crystals
+    uniqueID: 3822213867
+    locked: 0
   - name: Animals
     uniqueID: 2613795893
+    locked: 0
+  - name: SpiritParticles
+    uniqueID: 3881714663
     locked: 0
   - name: Hats
     uniqueID: 3416173545

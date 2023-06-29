@@ -1,6 +1,8 @@
 using System.Collections;
+using SharedLibrary;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using static UnityEngine.GraphicsBuffer;
 
 public class AttacksController : MonoBehaviour
 {
@@ -22,8 +24,8 @@ public class AttacksController : MonoBehaviour
         }
     }
 
-    [SerializeField] private GameObject Camera, WorldLight, FireworkParticlePrefab, testObject, testTarget, a0, a1, a2, a3, a4, a5;
-    [SerializeField] private GameObject FireAttackPrefab;
+    [SerializeField] private GameObject Camera, WorldLight, FireworkParticlePrefab, FireballParticlePrefab, testObject, testTarget, a0, a1, a2, a3, a4, a5;
+    [SerializeField] private GameObject FireAttackPrefab, FireballHitPrefab, LifeForceAttackPrefab, LifeForceHitPrefab;
     private float worldLightIntensity_Default = 1f;
     private float worldLightIntensity_Decrease = 0.2f;
     private Light2D worldLight;
@@ -43,7 +45,7 @@ public class AttacksController : MonoBehaviour
         sr5 = a5.transform.GetChild(1).GetComponent<SpriteRenderer>();
         if (Camera != null) _cameraShake = Camera.GetComponent<CameraShake>();
         if (WorldLight != null) worldLight = WorldLight.GetComponent<Light2D>();
-        
+        //DoSpiritAttack(5, 0, SpiritType.LIFE);
     }
 
     private IEnumerator MoveToPosition(GameObject animal, Vector3 targetPosition, float duration)
@@ -59,7 +61,7 @@ public class AttacksController : MonoBehaviour
         }
 
         gameObject.transform.position = targetPosition;
-        _cameraShake.Shake();
+        
         
         yield return null;
     }
@@ -94,32 +96,35 @@ public class AttacksController : MonoBehaviour
             yield return null;
         }
         animal.transform.position = targetPosition;
-        Camera.GetComponent<CameraShake>().Shake();
         yield return null;
         //yield return this.GetComponent<ExplosionEffect>().ExplodeCoroutine();
     }
 
-    public IEnumerator ExplodeCoroutine(GameObject gameObjectToDestroy, float explosionForce)
+    public IEnumerator ExplodeCoroutine(GameObject gameObjectToDestroy, GameObject target, SpiritType spiritType)
     {
-        Vector3 explosionPosition = gameObjectToDestroy.transform.position;
-        Destroy(gameObjectToDestroy);
-        
-        for (int i = 0; i < 6; i++)
-        {
-            Vector3 direction = Random.insideUnitSphere;
-            GameObject particle = Instantiate(FireworkParticlePrefab, explosionPosition, Quaternion.identity);
-            Rigidbody2D rb2D = particle.GetComponent<Rigidbody2D>();
-            rb2D.AddForce(direction * explosionForce, ForceMode2D.Impulse);
-            Light2D light2D = particle.GetComponent<Light2D>();
-            if (i < 3)
-            {
-                light2D.color = new Color(light2D.color.r, light2D.color.g, light2D.color.b, 1);
-            }
-            else
-            {
-                light2D.color = new Color(Color.yellow.r, Color.yellow.g, Color.yellow.b, 1);
+        GameObject hitParticles;
+        Vector3 explosionPosition = target.transform.position;
 
-            }
+        Destroy(gameObjectToDestroy);
+
+        switch (spiritType)
+        {
+            case SpiritType.FIRE:
+                hitParticles = Instantiate(FireballHitPrefab, explosionPosition, Quaternion.identity);
+                Destroy(hitParticles, 1f);
+                break;
+            case SpiritType.WATER:
+                hitParticles = Instantiate(FireballHitPrefab, explosionPosition, Quaternion.identity);
+                Destroy(hitParticles, 1f);
+                break;
+            case SpiritType.LIFE:
+                hitParticles = Instantiate(LifeForceHitPrefab, explosionPosition, Quaternion.identity);
+                Destroy(hitParticles, 1f);
+                break;
+            case SpiritType.DECAY:
+                hitParticles = Instantiate(FireballHitPrefab, explosionPosition, Quaternion.identity);
+                Destroy(hitParticles, 1f);
+                break;
         }
 
         worldLight.intensity = worldLightIntensity_Default;
@@ -151,17 +156,20 @@ public class AttacksController : MonoBehaviour
             sr = sr5;
         }
 
+        if (sr != null)
+        {
+            sr.color = Color.red;
+            yield return new WaitForSeconds(0.05f);
+            sr.color = Color.white;
+        }
         
-        sr.color = Color.red;
-        yield return new WaitForSeconds(0.05f);
-        sr.color = Color.white;
 
 
     }
-
-    private IEnumerator DoFireAttack(GameObject animal, GameObject target)
+    private IEnumerator DoLifeAttack(GameObject animal, GameObject target)
     {
         Vector3 animalPos = animal.transform.position;
+        byte direction = 0;
         Vector3 targetPos;
         if (target == null)
         {
@@ -176,19 +184,100 @@ public class AttacksController : MonoBehaviour
         if (animalPos.y < targetPos.y)
         {
             ballSpawnPos = new Vector3(animalPos.x, animalPos.y+1, 0);
+            direction = 0;
         }
         else
         {
             ballSpawnPos = new Vector3(animalPos.x, animalPos.y-1, 0);
+            direction = 2;
+        }
+        GameObject fireball = Instantiate(LifeForceAttackPrefab, ballSpawnPos, Quaternion.identity);
+
+        fireball.transform.localScale = new Vector3(0, 0, 0);
+        yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
+        StartCoroutine(MoveAnimalAttackSequence(animal, direction, .2f));
+        yield return MoveToPosition(fireball, targetPos, .7f);
+        yield return StartCoroutine(FlashRed(target));
+        StartCoroutine(MoveAnimalAttackSequence(target, direction, .15f));
+        _cameraShake.Shake();
+        yield return StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.LIFE));
+        yield return null;
+    }
+    private IEnumerator DoFireAttack(GameObject animal, GameObject target)
+    {
+        Vector3 animalPos = animal.transform.position;
+        byte direction = 0;
+        Vector3 targetPos;
+        if (target == null)
+        {
+            targetPos = new Vector3(animalPos.x, animalPos.y + 20, 0);
+        }
+        else
+        {
+            targetPos = target.transform.position;
+        }
+        
+        Vector3 ballSpawnPos;
+        if (animalPos.y < targetPos.y)
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y+1, 0);
+            direction = 0;
+        }
+        else
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y-1, 0);
+            direction = 2;
         }
         GameObject fireball = Instantiate(FireAttackPrefab, ballSpawnPos, Quaternion.identity);
 
         fireball.transform.localScale = new Vector3(0, 0, 0);
         yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
+        StartCoroutine(MoveAnimalAttackSequence(animal, direction, .2f));
         yield return MoveToPosition(fireball, targetPos, .7f);
         yield return StartCoroutine(FlashRed(target));
-        yield return StartCoroutine(ExplodeCoroutine(fireball, 12f));
+        StartCoroutine(MoveAnimalAttackSequence(target, direction, .15f));
+        _cameraShake.Shake();
+        yield return StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.FIRE));
         yield return null;
+    }
+    private IEnumerator DetachBoardLight(GameObject animal, float timePerMove)
+    {
+        GameObject boardLight = animal.transform.GetChild(3).gameObject;
+        boardLight.transform.SetParent(null);
+        yield return new WaitForSeconds(timePerMove * 2);
+        boardLight.transform.SetParent(animal.transform);
+    }
+    private IEnumerator MoveAnimalAttackSequence(GameObject animal, byte direction, float timePerMove)
+    {
+        float distanceToMove = 0.3f;
+        Vector3 animalPos = animal.transform.position;
+        
+        
+
+        switch (direction)
+        {
+            case 0:
+                StartCoroutine(DetachBoardLight(animal, timePerMove));
+                yield return MoveToPosition(animal, new Vector3(animalPos.x, animalPos.y + distanceToMove, 0), timePerMove);
+                yield return MoveToPosition(animal, animalPos, timePerMove);
+                break;
+            case 1:
+                StartCoroutine(DetachBoardLight(animal, timePerMove));
+                yield return MoveToPosition(animal, new Vector3(animalPos.x + distanceToMove, animalPos.y, 0), timePerMove);
+                yield return MoveToPosition(animal, animalPos, timePerMove);
+                break;
+            case 2:
+                StartCoroutine(DetachBoardLight(animal, timePerMove));
+                yield return MoveToPosition(animal, new Vector3(animalPos.x, animalPos.y - distanceToMove, 0), timePerMove);
+                yield return MoveToPosition(animal, animalPos, timePerMove);
+                break;
+            case 3:
+                StartCoroutine(DetachBoardLight(animal, timePerMove));
+                yield return MoveToPosition(animal, new Vector3(animalPos.x - distanceToMove, animalPos.y, 0), timePerMove);
+                yield return MoveToPosition(animal, animalPos, timePerMove);
+                break;
+        }
+        
     }
 
     public void DoAttack(int cardId, int animalId, int targetId)
@@ -208,14 +297,14 @@ public class AttacksController : MonoBehaviour
             case 10:
                 break;
             case 11:
-                FireAttack(animalId, targetId);
+                DoSpiritAttack(animalId, targetId, SpiritType.FIRE);
                 break;
             default:
                 break;
         }
     }
 
-    public void FireAttack(int animalId, int targetId)
+    public void DoSpiritAttack(int animalId, int targetId, SpiritType spiritType)
     {
         if (animalId == targetId) return;
         GameObject animal, target;
@@ -228,10 +317,20 @@ public class AttacksController : MonoBehaviour
         {
             target = GetAnimal(targetId);
         }
-       
-        
-        StartCoroutine(DoFireAttack(animal, target));
 
+        switch (spiritType)
+        {
+            case SpiritType.FIRE:
+                StartCoroutine(DoFireAttack(animal, target));
+                break;
+            case SpiritType.WATER:
+                break;
+            case SpiritType.LIFE:
+                StartCoroutine(DoLifeAttack(animal, target));
+                break;
+            case SpiritType.DECAY:
+                break;
+        }
         
     }
 

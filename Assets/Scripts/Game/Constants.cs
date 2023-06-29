@@ -1,5 +1,43 @@
 ﻿using System;
 public class Constants
 {
+    public const int max_x = 9;
+    public const int max_y = 17;
     public static readonly int max_animals = 6;
+    public static readonly int owl_hp = 453;
+    public static readonly int owl_dmg = 40;
+    public static readonly int chicken_hp = 372;
+    public static readonly int chicken_dmg = 20;
+    public static readonly int frog_hp = 571;
+    public static readonly int frog_dmg = 30;
+    public static readonly int egg_health = 26;
+    public static readonly int bear_hp = 890;
+    public static readonly int bear_dmg = 60;
+    public static readonly int bunny_hp = 390;
+    public static readonly int bunny_dmg = 26;
+    public static readonly int seal_hp = 670;
+    public static readonly int seal_dmg = 32;
+    public static readonly int cat_hp = 499;
+    public static readonly int cat_dmg = 34;
+    public static readonly int deer_hp = 702;
+    public static readonly int deer_dmg = 26;
+    public static readonly int elephant_hp = 999;
+    public static readonly int elephant_dmg = 45;
+    public static readonly int hedgehog_hp = 590;
+    public static readonly int hedgehog_dmg = 28;
+    public static readonly int dino_hp = 1108;
+    public static readonly int dino_dmg = 100;
+    public static readonly int whale_hp = 950;
+    public static readonly int whale_dmg = 38;
+    public static readonly int husky_hp = 599;
+    public static readonly int husky_dmg = 40;
+    public static int[] animal_hps = new int[14] { 0, owl_hp, chicken_hp, frog_hp, bear_hp, bunny_hp, seal_hp, cat_hp, deer_hp, elephant_hp, hedgehog_hp, dino_hp, whale_hp, husky_hp};
+    public static float chicken_back_offset = 0.2f;
+    public static float chicken_offset = 0.1f;
+    public static float bunny_offset = 0.1f;
+    public static float deer_back_offset = 0.1f;
+    public static float elephant_back_offset = 0.05f;
+    public static float hedgehog_back_offset = 0.05f;
+    public static float hedgehog_offset = 0.05f;
+    public static float whale_offset = 0.05f;
 }
