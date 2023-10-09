@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Game;
 using Network;
 using Riptide;
+using Scripts.GameStructure;
 using SharedLibrary;
 using SharedLibrary.Library;
 using SharedLibrary.Objects;
@@ -44,7 +45,8 @@ public class GameLogic : MonoBehaviour
         }
     }
 
-    [SerializeField] private GameObject gameObjects, greyedOut, possibleTilePrefab;//, trash;
+    [SerializeField] private GameObject gameObjects, greyedOut, possibleTilePrefab,
+        leftArrow, rightArrow, healthHead1, healthHead2, healthHead3, camera;//, trash;
     //public GameObject card0, card1, card2, card3, zoomCard, bcard0, bcard1, bcard2, bcard3;
     //public GameCard gc0, gc1, gc2, gc3;
     //private int selectedCard = -1;
@@ -61,14 +63,28 @@ public class GameLogic : MonoBehaviour
     private const int hor_offset = -4;
     private const int max_cards = 4;
     private bool possibleMoveTilesInitalized;
-    private BoxCollider2D bc0, bc1, bc2, bc3, bc4, bc5;//, cbc0,cbc1,cbc2,cbc3, trashbc;
+    private BoxCollider2D bc0, bc1, bc2, bc3, bc4, bc5, leftArrowBC, rightArrowBC, hh1BC, hh2BC, hh3BC;//, cbc0,cbc1,cbc2,cbc3, trashbc;
+    private BoxCollider2D buttonCollider, radioCollider;
     private SpriteRenderer csr0, csr1, csr2, csr3, asr0, asr1, asr2, asr3, asr4, asr5;
+    [SerializeField] private Sprite redTurnSprite, greenTurnSprite;
+    [SerializeField] private GameObject turnIndicator, innerCircle, outerCircle, leftArrowSprite, rightArrowSprite, button,
+        radio;
     private GameCardInfo gci0, gci1, gci2, gci3;
     //private Transform selectedCardPos;
-    private int selectedAnimal = -1;
+    public int selectedAnimal = -1, selectedTargetAnimal = -1;
+    private const float circleSizeThreshold = .25f;
     private GameObject selectedAnimalObj;
-    private bool isLoaded = false;
+    public bool isLoaded = false;
+    private CameraShake _shake;
+    public List<int> myDeadAnimals, enemyDeadAnimals;
+    private bool isMyTurn, leftArrowTouched, rightArrowTouched, invSelectActive;
+    private GameObject inventory_select, selected_item;
+    private int selected_id;
+
     public Dictionary<byte, GameObject> CrystalMap;
+    
+    public GameAnimal[] GameAnimals;
+    private SpriteRenderer leftArrowSpriteRenderer, rightArrowSpriteRenderer;
 
     public GameObject[] AnimalList;
     private bool[] animalMoved;
@@ -85,6 +101,19 @@ public class GameLogic : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        radioCollider = radio.GetComponent<BoxCollider2D>();
+        myDeadAnimals = new List<int>();
+        enemyDeadAnimals = new List<int>();
+        _shake = camera.GetComponent<CameraShake>();
+        hh1BC = healthHead1.GetComponent<BoxCollider2D>();
+        hh2BC = healthHead2.GetComponent<BoxCollider2D>();
+        hh3BC = healthHead3.GetComponent<BoxCollider2D>();
+        leftArrowBC = leftArrow.GetComponent<BoxCollider2D>();
+        rightArrowBC = rightArrow.GetComponent<BoxCollider2D>();
+        buttonCollider = button.GetComponent<BoxCollider2D>();
+        leftArrowSpriteRenderer = leftArrowSprite.GetComponent<SpriteRenderer>();
+        rightArrowSpriteRenderer = rightArrowSprite.GetComponent<SpriteRenderer>();
+        GameAnimals = new GameAnimal[6];
         possibleMoveTiles = new List<GameObject>();
         myAnimals = new GameObject[user_animals_count];
         enemyAnimals = new GameObject[user_animals_count];
@@ -123,11 +152,13 @@ public class GameLogic : MonoBehaviour
         myAnimals[0] = myAnimal0;
         myAnimals[1] = myAnimal1;
         myAnimals[2] = myAnimal2;
+        //arrows.SetActive(false);
     }
 
     // Update is called once per frame
     void Update()
     {
+        
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -152,85 +183,348 @@ public class GameLogic : MonoBehaviour
                     //StartCoroutine(SelectCardProcess(0));
                     
                 }*/
-                if(tc == bc0)
+                if((tc == bc0 || tc == hh1BC) && !myDeadAnimals.Contains(0))
                 {
-                    if (selectedAnimal >= 0)
+                    if (selectedAnimal >= 0 )
                     {
-                        StartCoroutine(DeselectAnimal());
+                        StartCoroutine(DeselectAnimal(true));
                     }
+
+                    StartCoroutine(DeselectItem());
                     StartCoroutine(SelectAnimal(0));
                 }
-                else if (tc == bc1)
+                else if ((tc == bc1|| tc == hh2BC) && !myDeadAnimals.Contains(1))
                 {
                     if (selectedAnimal >= 0)
                     {
-                        StartCoroutine(DeselectAnimal());
+                        StartCoroutine(DeselectAnimal(true));
                     }
+                    StartCoroutine(DeselectItem());
                     StartCoroutine(SelectAnimal(1));
                 }
-                else if (tc == bc2)
+                else if ((tc == bc2 || tc == hh3BC) && !myDeadAnimals.Contains(2))
                 {
                     if (selectedAnimal >= 0)
                     {
-                        StartCoroutine(DeselectAnimal());
+                        StartCoroutine(DeselectAnimal(true));
                     }
+                    StartCoroutine(DeselectItem());
                     StartCoroutine(SelectAnimal(2));
                 }
                 else if(tc == bc3)
                 {
                     if (selectedAnimal >= 0)
                     {
-                        StartCoroutine(DeselectAnimal());
+                        //SendAttackRequest(selectedAnimal, 3);
+                        StartCoroutine(DeselectAnimal(false));
                     }
+                    StartCoroutine(DeselectItem());
                 }
                 else if (tc == bc4)
                 {
                     if (selectedAnimal >= 0)
                     {
-                        StartCoroutine(DeselectAnimal());
+                        
+                        StartCoroutine(DeselectAnimal(false));
                     }
+                    StartCoroutine(DeselectItem());
                 }
                 else if (tc == bc5)
                 {
                     if (selectedAnimal >= 0)
                     {
-                        StartCoroutine(DeselectAnimal());
+                        //SendAttackRequest(selectedAnimal, 5);
+                        StartCoroutine(DeselectAnimal(false));
                     }
+                    StartCoroutine(DeselectItem());
+                }
+                else if (tc == buttonCollider)
+                {
+                    if (GameController.Instance.cA)
+                    {
+                        if (CheckCircleSize() < circleSizeThreshold)
+                        {
+                            StartCoroutine(GameController.Instance.SpawnPerfect());
+                            SendAttackRequest(selectedAnimal, selectedTargetAnimal);
+                            StartCoroutine(DeselectAnimal(false));
+                        }
+                        else
+                        {
+                            _shake.Shake(.2f, .075f);
+                            StartCoroutine(GameController.Instance.StopAndFadeCircle());
+                            StartCoroutine(GameController.Instance.FlashRed());
+                            if (isMyTurn)
+                            {
+                                StartCoroutine(GameController.Instance.StartupCircle());
+                            }
+                            StartCoroutine(GameController.Instance.SpawnMissedHit());
+                            if (!isMyTurn)
+                            {
+                                StartCoroutine(GameController.Instance.StopAndFadeCircle());
+                            }
+                        }
+                    }
+                } else if (tc == leftArrowBC)
+                {
+                    if (selectedAnimal < 0) return;
+                    leftArrowTouched = true;
+                    leftArrowSpriteRenderer.color = Color.grey;
+                    StartCoroutine(ShiftTargetLeft());
+                }else if (tc == rightArrowBC)
+                {
+                    if (selectedAnimal < 0) return;
+                    rightArrowTouched = true;
+                    rightArrowSpriteRenderer.color = Color.grey;
+                    StartCoroutine(ShiftTargetRight());
+                } else if (tc == radioCollider)
+                {
+                    MusicController.Instance.PlayRadio();
                 }
                 else
                 {
-                    StartCoroutine(SelectMoveTile(tc));
+                    bool inventoryItemTouched = false;
+                    lock (InventoryController.Instance.inventoryLock)
+                    {
+                        for (int i = 0; i < InventoryController.Instance.inventoryItems.Count; i++)
+                        {
+                            GameObject go = InventoryController.Instance.inventoryItems[i];
+                            if (!go.IsDestroyed())
+                            {
+                                if (tc == go.transform.GetChild(0).GetComponent<BoxCollider2D>())
+                                {
+                                    if (invSelectActive)
+                                    {
+                                        Destroy(inventory_select);
+                                    }
+                                    inventoryItemTouched = true;
+                                    inventory_select = Instantiate(InventoryController.Instance.inventory_select,
+                                        InventoryController.Instance.GetInventorySelectPosition(i), Quaternion.identity);
+                                    invSelectActive = true;
+                                    selected_item = go;
+                                    selected_id = i;
+                                }
+                            }
+                        }
+                    }
                     
+
+                    bool dirtTouched = false;
+
+                    if (!inventoryItemTouched)
+                    {
+                        lock (PlantController.Instance.dirtLock)
+                        {
+                            for (int i = 0; i < PlantController.Instance.dirtTiles.Count; i++)
+                            {
+                                GameObject go = PlantController.Instance.dirtTiles[i];
+                                if (tc == go.transform.GetChild(0).GetComponent<BoxCollider2D>())
+                                {
+                                    dirtTouched = true;
+                                    if (invSelectActive)
+                                    {
+                                        PlantController.Instance.PlantSeed(selected_id, go.transform.position.x, go.transform.position.y);
+                                        StartCoroutine(DeselectItem());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!inventoryItemTouched && !dirtTouched)
+                    {
+                        StartCoroutine(DeselectItem());
+                        SelectMoveTile(tc);
+                        
+                    }
+                    
+                }
+            } else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+            {
+                if (leftArrowTouched)
+                {
+                    leftArrowTouched = false;
+                    leftArrowSpriteRenderer.color = Color.white;
+                }
+
+                if (rightArrowTouched)
+                {
+                    rightArrowTouched = false;
+                    rightArrowSpriteRenderer.color = Color.white;
                 }
             }
         }
+        GameController.Instance.DoCircleGrowth(outerCircle);
     }
-    private IEnumerator DeselectAnimal()
+
+    private IEnumerator ShiftTargetRight()
     {
+        if (selectedAnimal > -1)
+        {
+            switch (selectedTargetAnimal)
+            {
+                case 3:
+                    if (enemyAnimal1.activeSelf)
+                    {
+                        selectedTargetAnimal = 4;
+                        asr4.color = Color.white;
+                        asr3.color = Color.grey;
+                        asr5.color = Color.grey;
+                    } else if (enemyAnimal2.activeSelf)
+                    {
+                        selectedTargetAnimal = 5;
+                        asr5.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr3.color = Color.grey;
+                    }
+                    break;
+                case 4:
+                    if (enemyAnimal2.activeSelf)
+                    {
+                        selectedTargetAnimal = 5;
+                        asr5.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr3.color = Color.grey;
+                    } else if (enemyAnimal0.activeSelf)
+                    {
+                        selectedTargetAnimal = 3;
+                        asr3.color = Color.white;
+                        asr5.color = Color.grey;
+                        asr4.color = Color.grey;
+                    }
+                    break;
+                case 5:
+                    if (enemyAnimal0.activeSelf)
+                    {
+                        selectedTargetAnimal = 3;
+                        asr3.color = Color.white;
+                        asr5.color = Color.grey;
+                        asr4.color = Color.grey;
+                    } else if (enemyAnimal1.activeSelf)
+                    {
+                        selectedTargetAnimal = 4;
+                        asr4.color = Color.white;
+                        asr3.color = Color.grey;
+                        asr5.color = Color.grey;
+                    }
+                    break;
+            }
+        } 
+        yield return null;
+    }
+    private IEnumerator ShiftTargetLeft()
+    {
+        if (selectedAnimal > -1)
+        {
+            switch (selectedTargetAnimal)
+            {
+                case 3:
+                    if (enemyAnimal2.activeSelf)
+                    {
+                        selectedTargetAnimal = 5;
+                        asr5.color = Color.white;
+                        asr3.color = Color.grey;
+                        asr4.color = Color.grey;
+                    } else if (enemyAnimal1.activeSelf)
+                    {
+                        selectedTargetAnimal = 4;
+                        asr4.color = Color.white;
+                        asr5.color = Color.grey;
+                        asr3.color = Color.grey;
+                    }
+                    break;
+                    
+                case 4:
+                    if (enemyAnimal0.activeSelf)
+                    {
+                        selectedTargetAnimal = 3;
+                        asr3.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.grey;
+                    } else if (enemyAnimal2.activeSelf)
+                    {
+                        selectedTargetAnimal = 5;
+                        asr5.color = Color.white;
+                        asr3.color = Color.grey;
+                        asr4.color = Color.grey;
+                    }
+
+                    break;
+                case 5:
+                    if (enemyAnimal1.activeSelf)
+                    {
+                        selectedTargetAnimal = 4;
+                        asr4.color = Color.white;
+                        asr5.color = Color.grey;
+                        asr3.color = Color.grey;
+                    } else if (enemyAnimal0.activeSelf)
+                    {
+                        selectedTargetAnimal = 3;
+                        asr3.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.grey;
+                    }
+                    break;
+            }
+        }
+        yield return null;
+    }
+
+    public void CallDeselectItem()
+    {
+        StartCoroutine(DeselectItem());
+    }
+
+    private IEnumerator DeselectItem()
+    {
+        if (selected_id > -1)
+        {
+            invSelectActive = false;
+            Destroy(inventory_select);
+            selected_id = -1;
+        }
+        yield return null;
+    }
+
+    public void CallDeselectAnimal()
+    {
+        StartCoroutine(DeselectAnimal(false));
+    }
+    private IEnumerator DeselectAnimal(bool saveTarget)
+    {
+        //arrows.SetActive(false);
         greyedOut.SetActive(false);
         asr0.color = Color.white;
         asr1.color = Color.white;
         asr2.color = Color.white;
-        asr3.color = Color.white;
-        asr4.color = Color.white;
-        asr5.color = Color.white;
+        if (!saveTarget)
+        {
+            selectedTargetAnimal = -1;
+            asr3.color = Color.white;
+            asr4.color = Color.white;
+            asr5.color = Color.white;
+        }
+
         selectedAnimal = -1;
+       
         selectedAnimalObj = null;
         possibleMoveTilesInitalized = false;
         foreach(GameObject go in possibleMoveTiles)
         {
             Destroy(go);
         }
+
+        StartCoroutine(GameController.Instance.StopAndFadeCircle());
         possibleMoveTiles.RemoveRange(0,possibleMoveTiles.Count);
         yield return null;
     }
-    public IEnumerator SelectMoveTile(Collider2D c)
+    public void SelectMoveTile(Collider2D c)
     {
-        if (selectedAnimal < 0) yield return null; 
+        if (selectedAnimal < 0) return; 
         foreach(GameObject go in possibleMoveTiles)
         {
-            if(go.GetComponent<BoxCollider2D>() == c)
+            if(go.transform.GetChild(0).GetComponent<BoxCollider2D>() == c)
             {
+                Destroy(go);
                 int x = Mathf.RoundToInt(selectedAnimalObj.transform.position.x);
                 int y = Mathf.RoundToInt(selectedAnimalObj.transform.position.y);
                 int moveTileX = Mathf.RoundToInt(go.transform.position.x);
@@ -251,14 +545,116 @@ public class GameLogic : MonoBehaviour
                 }
                 message.AddInt(moveTileX - x);
                 message.AddInt(moveTileY - y);
+                Debug.Log($"move tile at {moveTileX - x} {moveTileY - y}");
                 NetworkManager.Singleton.MainClient.Send(message);
             }
         }
         
-        yield return DeselectAnimal();
+        StartCoroutine(DeselectAnimal(false));
+    }
+
+    private IEnumerator DoTargetSelect()
+    {
+        if (selectedTargetAnimal < 0)
+        {
+            if (enemyAnimal0.activeSelf)
+            {
+                asr3.color = Color.white;
+                asr4.color = Color.grey;
+                asr5.color = Color.grey;
+                selectedTargetAnimal = 3;
+            } else if (enemyAnimal1.activeSelf)
+            {
+                asr3.color = Color.grey;
+                asr4.color = Color.white;
+                asr5.color = Color.grey;
+                selectedTargetAnimal = 4;
+            } else if (enemyAnimal2.activeSelf)
+            {
+                asr3.color = Color.grey;
+                asr4.color = Color.grey;
+                asr5.color = Color.white;
+                selectedTargetAnimal = 5;
+            }
+        }
+        else
+        {
+            switch (selectedTargetAnimal)
+            {
+                case -1:
+                    break;
+                case 3:
+                    if (enemyAnimal0.activeSelf)
+                    {
+                        asr3.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.grey;
+                        selectedTargetAnimal = 3;
+                    } else if (enemyAnimal1.activeSelf)
+                    {
+                        asr3.color = Color.grey;
+                        asr4.color = Color.white;
+                        asr5.color = Color.grey;
+                        selectedTargetAnimal = 4;
+                    } else if (enemyAnimal2.activeSelf)
+                    {
+                        asr3.color = Color.grey;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.white;
+                        selectedTargetAnimal = 5;
+                    }
+                    break;
+                case 4:
+                    if (enemyAnimal1.activeSelf)
+                    {
+                        asr3.color = Color.grey;
+                        asr4.color = Color.white;
+                        asr5.color = Color.grey;
+                        selectedTargetAnimal = 4;
+                    } else if (enemyAnimal2.activeSelf)
+                    {
+                        asr3.color = Color.grey;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.white;
+                        selectedTargetAnimal = 5;
+                    } else  if (enemyAnimal0.activeSelf)
+                    {
+                        asr3.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.grey;
+                        selectedTargetAnimal = 3;
+                    } 
+                    break;
+                case 5:
+                    if (enemyAnimal2.activeSelf)
+                    {
+                        asr3.color = Color.grey;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.white;
+                        selectedTargetAnimal = 5;
+                    } else  if (enemyAnimal0.activeSelf)
+                    {
+                        asr3.color = Color.white;
+                        asr4.color = Color.grey;
+                        asr5.color = Color.grey;
+                        selectedTargetAnimal = 3;
+                    } else if (enemyAnimal1.activeSelf)
+                    {
+                        asr3.color = Color.grey;
+                        asr4.color = Color.white;
+                        asr5.color = Color.grey;
+                        selectedTargetAnimal = 4;
+                    } 
+                    break;
+            }
+        }
+
+        yield return null;
     }
     private IEnumerator SelectAnimal(int animalId)
     {
+        if (isPlayerOne && GameEventRoutineManager.Instance.IsConflict(animalId)) yield break;
+        if (!isPlayerOne && GameEventRoutineManager.Instance.IsConflict(animalId+3)) yield break;
         greyedOut.SetActive(true);
         selectedAnimal = animalId;
         switch (selectedAnimal)
@@ -266,29 +662,32 @@ public class GameLogic : MonoBehaviour
             case 0:
                 asr1.color = Color.grey;
                 asr2.color = Color.grey;
-                asr3.color = Color.grey;
-                asr4.color = Color.grey;
-                asr5.color = Color.grey;
+                
                 selectedAnimalObj = myAnimal0;
+                
+                StartCoroutine(DoTargetSelect());
                 break;
             case 1:
                 asr0.color = Color.grey;
                 asr2.color = Color.grey;
-                asr3.color = Color.grey;
-                asr4.color = Color.grey;
-                asr5.color = Color.grey;
+                
                 selectedAnimalObj = myAnimal1;
+                StartCoroutine(DoTargetSelect());
                 break;
             case 2:
                 asr1.color = Color.grey;
                 asr0.color = Color.grey;
-                asr3.color = Color.grey;
-                asr4.color = Color.grey;
-                asr5.color = Color.grey;
+                
                 selectedAnimalObj = myAnimal2;
+                StartCoroutine(DoTargetSelect());
                 break;
         }
         DisplayPossibleMoveTiles();
+        if (isMyTurn && !GameController.Instance.doScaling)
+        {
+            StartCoroutine(GameController.Instance.StartupCircleNoDelay());
+        }
+        
         yield return null;
     }
 
@@ -300,8 +699,8 @@ public class GameLogic : MonoBehaviour
             int max_y_move = 7;
             int min_x_border = -5;
             int max_x_border = 5;
-            int min_y_border = -9;
-            int max_y_border = 9;
+            int min_y_border = -7;
+            int max_y_border = 11;
             Tuple<int, int>[] currentAnimalPositions = new Tuple<int, int>[user_animals_count];
             Tuple<int, int>[] currentEnemyAnimalPositions = new Tuple<int, int>[user_animals_count];
             int animalId;
@@ -346,11 +745,7 @@ public class GameLogic : MonoBehaviour
                                     shouldPutTile = false;
                                 }
                             }
-                            if (newX <= min_x_border || newX >= max_x_border || newY <= min_y_border || newY >= max_y_border || (newX == -1 && newY == -6) ||
-                                (newX == 0 && newY == -6) || (newX == 1 && newY == -6) || (newX == -1 && newY == -7) || (newX == 0 && newY == -7)
-                                    || (newX == 1 && newY == -7) || (newX == -1 && newY == -8) || (newX == 0 && newY == -8) || (newX == 1 && newY == -8)
-                                    || (newX == -1 && newY == 6) || (newX == 0 && newY == 6) || (newX == 1 && newY == 6) || (newX == -1 && newY == 7)
-                                    || (newX == 0 && newY == 7) || (newX == 1 && newY == 7) || (newX == -1 && newY == 8) || (newX == 0 && newY == 8) || (newX == 1 && newY == 8) ||
+                            if (newX <= min_x_border || newX >= max_x_border || newY <= min_y_border || newY >= max_y_border ||
                                     (shouldPutTile == false))
                             {
 
@@ -578,8 +973,24 @@ public class GameLogic : MonoBehaviour
         }
     }
     //each byte represents id, x, or y locaiton p1a0id = player 1 animal 0 id
-    public void StartTransition(byte p1a0id, byte p1a0x, byte p1a0y, byte p1a1id, byte p1a1x, byte p1a1y, byte p1a2id, byte p1a2x, byte p1a2y, byte p2a0id, byte p2a0x, byte p2a0y, byte p2a1id, byte p2a1x, byte p2a1y, byte p2a2id, byte p2a2x, byte p2a2y, (byte,byte)[,] gameBoard)
-    {    
+    public void StartTransition(byte p1a0id, byte p1a0x, byte p1a0y, byte p1a1id, byte p1a1x, byte p1a1y, byte p1a2id, 
+        byte p1a2x, byte p1a2y, byte p2a0id, byte p2a0x, byte p2a0y, byte p2a1id, byte p2a1x, byte p2a1y, byte p2a2id, 
+        byte p2a2x, byte p2a2y, (byte,byte)[,] gameBoard, byte a0Id, byte a0Key, byte a1Id, byte a1Key,byte a2Id, byte a2Key,
+        byte a3Id, byte a3Key,byte a4Id, byte a4Key,byte a5Id, byte a5Key, bool c0dirt, bool c1dirt,bool c2dirt,bool c3dirt,
+        bool c4dirt,bool c5dirt, byte item0, byte item1, byte item2, byte item3, byte item4, byte item5)
+    {
+        InputLogic.Instance.StopMenuSource();
+        GameController.Instance.DoStartCountdown();
+        StartCoroutine(disableAnimals());
+        for (int i = 0; i < max_animals; i++)
+        {
+            var ga = new GameAnimal();
+            ga.FireCount = 0;
+            ga.WaterCount = 0;
+            ga.LifeCount = 0;
+            ga.DecayCount = 0;
+            GameAnimals[i] = ga;
+        }
         animalInfo[0] = new Vector3((float)p1a0id, (float)p1a0x, (float)p1a0y);
         animalInfo[1] = new Vector3((float)p1a1id, (float)p1a1x, (float)p1a1y);
         animalInfo[2] = new Vector3((float)p1a2id, (float)p1a2x, (float)p1a2y);
@@ -587,6 +998,7 @@ public class GameLogic : MonoBehaviour
         animalInfo[4] = new Vector3((float)p2a1id, (float)p2a1x, (float)p2a1y);
         animalInfo[5] = new Vector3((float)p2a2id, (float)p2a2x, (float)p2a2y);
         MoveToStartingPosition();
+        
         LoadAnimalSprites();
         InitializeCrystals(gameBoard);
         HealthController.Instance.InitializeHeadSprites();
@@ -595,27 +1007,145 @@ public class GameLogic : MonoBehaviour
             isLoaded = true;
             GameObject.FindGameObjectWithTag("LoginDisplay").SetActive(false);
         }
-       
+        StartCoroutine(GameController.Instance.SpawnParachutingAnimals(a0Id, a0Key, a1Id, a1Key, a2Id, a2Key,
+            a3Id, a3Key, a4Id, a4Key, a5Id, a5Key, c0dirt, c1dirt, c2dirt, c3dirt, c4dirt, c5dirt, item0, item1,item2,
+            item3,item4,item5, p1a0x, p1a0y, p1a1x, p1a1y, p1a2x, p1a2y, p2a0x, p2a0y,p2a1x, p2a1y, p2a2x, p2a2y));
         enableObjects();
     }
 
+    private void SendAttackRequest(int animalId, int targetId)
+    {
+        if (animalId < 0 || targetId < 0) return;
+        animalId = GetAnimalForPlayer(animalId);
+        targetId = GetAnimalForPlayer(targetId);
 
+        if (GameAnimals[animalId].FireCount > 0)
+        {
+            GameMessages.SendAttackRequest(animalId, targetId, (int)SpiritType.FIRE, GameAnimals[animalId].FireCount);
+        } else if (GameAnimals[animalId].WaterCount > 0)
+        {
+            GameMessages.SendAttackRequest(animalId, targetId, (int)SpiritType.WATER, GameAnimals[animalId].WaterCount);
+        } else if (GameAnimals[animalId].LifeCount > 0)
+        {
+            GameMessages.SendAttackRequest(animalId, targetId, (int)SpiritType.LIFE, GameAnimals[animalId].LifeCount);
+        }
+        else if (GameAnimals[animalId].DecayCount > 0)
+        {
+            GameMessages.SendAttackRequest(animalId, targetId, (int)SpiritType.DECAY, GameAnimals[animalId].DecayCount);
+        }
+        else
+        {
+            GameMessages.SendAttackRequest(animalId, targetId, 0, 0);
+        }
+    }
+
+    public void EndGame()
+    {
+        foreach(GameObject go in CrystalMap.Values)
+        {
+            Destroy(go);
+        }
+        CrystalMap.Clear();
+        foreach(GameObject go in PlantController.Instance.plantObjects.Values)
+        {
+            Destroy(go);
+        }
+        PlantController.Instance.plantObjects.Clear();
+        foreach(GameObject go in PlantController.Instance.dirtTiles)
+        {
+            Destroy(go);
+        }
+        PlantController.Instance.dirtTiles.Clear();
+
+        for (int i = 0; i < max_animals; i++)
+        {
+            GameAnimals[i] = null;
+            CrystalController.Instance.DestroyChildrenParticles(CrystalController.Instance.GetAnimalNoSwitch(i));
+        }
+        gameObjects.SetActive(false);
+        SceneManager.SetActiveScene(SceneManager.GetSceneByName("LoginRegisterScene"));
+        isLoaded = false;
+        IsPlayerOne = false;
+        InputLogic.Instance.EndGame();
+    }
+
+    public void UpdateTurn(int playerTurn)
+    {
+        if ((playerTurn == 1 && isPlayerOne) || (playerTurn == 2 && !isPlayerOne))
+        {
+            TimerController.Instance.StartTimer();
+            //turnIndicatorSR.sprite = greenTurnSprite;
+            isMyTurn = true;
+            if (selectedAnimal > -1)
+            {
+                GameController.Instance.SetCA(true);
+                GameController.Instance.SetDoScaling(true);
+                StartCoroutine(GameController.Instance.StartupCircleNoDelay());
+            }
+            //StartCoroutine(GameController.Instance.StartupCircleNoDelay());
+        } 
+        else
+        {
+            TimerController.Instance.SetTimerFull();
+            isMyTurn = false;
+            GameController.Instance.SetCA(false);
+            GameController.Instance.SetDoScaling(false);
+            StartCoroutine(GameController.Instance.StopAndFadeCircle());
+            StartCoroutine(DeselectAnimal(false));
+        }
+        
+    }
     /*
     //helper functions
     */
+    public IEnumerator enableAnimals()
+    {
+        myAnimal0.SetActive(true);
+        myAnimal1.SetActive(true);
+        myAnimal2.SetActive(true);
+        enemyAnimal0.SetActive(true);
+        enemyAnimal1.SetActive(true);
+        enemyAnimal2.SetActive(true);
+        yield return null;
+    }
+    public IEnumerator disableAnimals()
+    {
+        myAnimal0.SetActive(false);
+        myAnimal1.SetActive(false);
+        myAnimal2.SetActive(false);
+        enemyAnimal0.SetActive(false);
+        enemyAnimal1.SetActive(false);
+        enemyAnimal2.SetActive(false);
+        yield return null;
+    }
     public void enableObjects()
     {
         gameObjects.SetActive(true);
         SceneManager.SetActiveScene(SceneManager.GetSceneByName("GameScene1"));
     }
-    private static int flipX(int x)
+    public static int flipX(int x)
     {
         return max_x - x;
     }
-    private static int flipY(int y)
+    public static int flipY(int y)
     {
         return max_y - y;
     }
 
+    private float CheckCircleSize()
+    {
+        return Mathf.Pow(outerCircle.transform.localScale.x - innerCircle.transform.localScale.x, 2);
+    }
+    public int GetAnimalForPlayer(int animalId)
+    {
+        if (isPlayerOne)
+        {
+            return animalId;
+        }
+        
+        return (animalId == 0
+                ? 3
+                : (animalId == 1 ? 4 : (animalId == 2 ? 5 : (animalId == 3 ? 0 : (animalId == 4 ? 1 : 2)))));
+    }
 
 }

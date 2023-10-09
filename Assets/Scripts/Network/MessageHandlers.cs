@@ -1,9 +1,15 @@
 
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Game;
 using Riptide;
+using Scripts.GameStructure;
 using SharedLibrary;
 using SharedLibrary.Library;
 using Unity;
+using UnityEditor;
+using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -32,6 +38,7 @@ namespace Network
         [MessageHandler((ushort)MessageResponseCodes.KeyResponse)]
         private static void HandleKeyResponse(Message message)
         {
+            Debug.Log("key repsonse");
             Key = message.GetString();
         }
         [MessageHandler((ushort)MessageResponseCodes.TokenReceived)]
@@ -86,7 +93,7 @@ namespace Network
                 for (int j = 0; j < Constants.max_y; j++)
                 {
                     byte crystalKey = message.GetByte();
-                    byte crystalId = message.GetByte();
+                    byte crystalId = message.GetByte(); 
                     if (GameLogic.Instance.IsPlayerOne)
                     {
                         gameBoard[i, j] = (crystalKey,crystalId);
@@ -100,7 +107,41 @@ namespace Network
                     
                 }
             }
-            GameLogic.Instance.StartTransition(p1a0id, p1a0x, p1a0y, p1a1id, p1a1x, p1a1y, p1a2id, p1a2x, p1a2y, p2a0id, p2a0x, p2a0y, p2a1id, p2a1x, p2a1y, p2a2id, p2a2x, p2a2y,gameBoard);
+
+            byte c0Id = message.GetByte();
+            byte c0Key = message.GetByte();
+            byte c1Id = message.GetByte();
+            byte c1Key = message.GetByte();
+            byte c2Id = message.GetByte();
+            byte c2Key = message.GetByte();
+            byte c3Id = message.GetByte();
+            byte c3Key = message.GetByte();
+            byte c4Id = message.GetByte();
+            byte c4Key = message.GetByte();
+            byte c5Id = message.GetByte();
+            byte c5Key = message.GetByte();
+            bool c0Dirt = message.GetBool();
+            bool c1Dirt = message.GetBool();
+            bool c2Dirt = message.GetBool();
+            bool c3Dirt = message.GetBool();
+            bool c4Dirt = message.GetBool();
+            bool c5Dirt = message.GetBool();
+            byte item0 = message.GetByte();
+            byte item1 = message.GetByte();
+            byte item2 = message.GetByte();
+            byte item3 = message.GetByte();
+            byte item4 = message.GetByte();
+            byte item5 = message.GetByte();
+           
+
+
+            GameLogic.Instance.StartTransition(p1a0id, p1a0x, p1a0y, p1a1id, p1a1x, p1a1y, p1a2id, p1a2x, p1a2y, p2a0id, 
+                p2a0x, p2a0y, p2a1id, p2a1x, p2a1y, p2a2id, p2a2x, p2a2y,gameBoard,
+                c0Id, c0Key, c1Id, c1Key, c2Id, c2Key, c3Id, c3Key, c4Id, 
+                c4Key, c5Id, c5Key, c0Dirt, c1Dirt, c2Dirt, c3Dirt, c4Dirt, c5Dirt, item0, item1, item2, 
+                item3, item4,item5);
+            
+            
         }
         
         [MessageHandler((ushort)MessageResponseCodes.StartTurnSignal)]
@@ -219,10 +260,7 @@ namespace Network
         private static void HandleAnimalDeath(Message message)
         {
             int animalId = message.GetInt();
-            if (animalId >=0 && animalId <6)
-            {
-                HealthController.Instance.OnDeadAnimal(animalId);
-            }
+           
         }
 
         [MessageHandler((ushort)MessageResponseCodes.SendGameBoard)]
@@ -243,16 +281,71 @@ namespace Network
             int animalId = message.GetInt();
             int x = message.GetInt();
             int y = message.GetInt();
+            int effectId = message.GetInt();
+            int oldX = message.GetInt();
+            int oldY = message.GetInt();
+            byte crystalId = message.GetByte();
+            byte crystalKey = message.GetByte();
+            byte oldCrystalKey = message.GetByte();
+            int addedHealth = message.GetInt();
+            bool spawnDirt = message.GetBool();
+            byte itemId = message.GetByte();
+            
+            GameEventRoutine routine = new GameEventRoutine();
+            routine.animalId = animalId;
+            routine.targetId = -1;
+            routine.gameEvent = GameEvent.Move;
+            routine.x = x;
+            routine.y = y;
+            routine.crystalKey = crystalKey;
+            routine.crystalId = crystalId;
+            routine.addedHealth = addedHealth;
+            routine.effectId = effectId;
+            routine.oldCrystalKey = oldCrystalKey;
+            routine.spawnDirt = spawnDirt;
+            routine.oldX = oldX;
+            routine.oldY = oldY;
+            routine.execute = MoveController.Instance.MoveRoutine;
+            routine.gameEvent = GameEvent.Move;
+            routine.itemId = (ItemId)itemId;
+            GameEventRoutineManager.Instance.AddRoutine(routine);
+            Debug.Log("animalId: " + animalId + " selectedAnimal" + GameLogic.Instance.selectedAnimal);
             if (GameLogic.Instance.IsPlayerOne)
             {
+                
+                if (GameLogic.Instance.selectedAnimal == animalId)
+                {
+                    GameLogic.Instance.CallDeselectAnimal();
+                }
+            }
+            else
+            {
+                if (GameLogic.Instance.selectedAnimal == animalId-3)
+                {
+                    GameLogic.Instance.CallDeselectAnimal();
+                }
+            }
+            
+            
+            
+            /*
+             if (GameLogic.Instance.IsPlayerOne)
+            {
                 MoveController.Instance.MoveAnimal(animalId, x+hor_offset, y + vert_offset);
+                CrystalController.Instance.PickupCrystal(animalId, crystalId, crystalKey, x, y, addedHealth);
+                AnimalEffectController.Instance.DoEffect(effectId, oldX + hor_offset, oldY + vert_offset, oldCrystalKey);
             }
             else
             {
                 MoveController.Instance.MoveAnimal(animalId, flipX(x)+hor_offset, flipY(y)+vert_offset);
-            }
+                
+                CrystalController.Instance.PickupCrystal(SwitchAnimal(animalId), crystalId, crystalKey,
+                    flipX(x), flipY(y), addedHealth);
+                AnimalEffectController.Instance.DoEffect(effectId, flipX(oldX) + hor_offset, flipY(oldY) + vert_offset, oldCrystalKey);
+            }*/
+            
         }
-
+/*
         [MessageHandler((ushort)MessageResponseCodes.PickupCrystal)]
         private static void HandlePickupCrystal(Message message)
         {
@@ -265,14 +358,117 @@ namespace Network
             if (GameLogic.Instance.IsPlayerOne)
             {
                 Debug.Log("crystal picked up");
-                CrystalController.Instance.PickupCrystal(animalId, crystalId, crystalKey, fullCrystal, x, y);
+                
             }
             else
             {
                 Debug.Log("crystal picked up");
-                CrystalController.Instance.PickupCrystal(SwitchAnimal(animalId), crystalId, crystalKey, fullCrystal, flipX(x), flipY(y));
+                CrystalController.Instance.PickupCrystal(SwitchAnimal(animalId), crystalId, crystalKey,
+                    flipX(x), flipY(y));
             }
-           
+        }*/
+
+        [MessageHandler((ushort)MessageResponseCodes.AnimalAttackSuccess)]
+        private static void HandleAttackAction(Message message)
+        {
+            int animalId = message.GetInt();
+            int targetId = message.GetInt();
+            int spiritType = message.GetInt();
+            int damage = message.GetInt();
+            bool isDead = message.GetBool();
+            bool spawnNewCrystal = message.GetBool();
+            byte newX = message.GetByte();
+            byte newY = message.GetByte();
+            byte crystalKey = message.GetByte();
+            float healthRatio = message.GetFloat();
+            byte attackModifierCount = message.GetByte();
+            AttackModifiers[] attackModifiers = new AttackModifiers[attackModifierCount];
+            for (int i = 0; i < attackModifierCount; i++)
+            {
+                byte attackModifier = message.GetByte();
+                attackModifiers[i] = (AttackModifiers)attackModifier;
+            }
+            
+            Debug.Log(animalId + " " + targetId + " " + spiritType);
+            GameEventRoutine routine = new GameEventRoutine();
+            routine.animalId = animalId;
+            routine.targetId = targetId;
+            routine.spiritType = (SpiritType) spiritType;
+            routine.addedHealth = damage;
+            routine.isKOed = isDead;
+            routine.spawnNewCrystal = spawnNewCrystal;
+            routine.newX = newX;
+            routine.newY = newY;
+            routine.crystalKey = crystalKey;
+            routine.gameEvent = GameEvent.Attack;
+            routine.healthRatio = healthRatio;
+            routine.attackModifier = attackModifiers;
+            routine.execute = AttacksController.Instance.SpiritAttackRoutine;
+            GameEventRoutineManager.Instance.AddRoutine(routine);
+            /*
+            AttacksController.Instance.DoSpiritAttack(animalId, targetId, (SpiritType) spiritType, damage, isDead,
+                spawnNewCrystal, newX, newY, crystalKey);
+                */
+        }
+        [MessageHandler((ushort)MessageResponseCodes.EndTurnSignal)]
+        private static void HandleNewTurn(Message message)
+        {
+            int playerTurn = message.GetInt();
+            int plantResponseCount = message.GetInt();
+            int effectsResponseCount = message.GetInt();
+            int locationEffectsCount = message.GetInt();
+            for (int i = 0; i < plantResponseCount; i++)
+            {
+                byte item1 = message.GetByte();
+                byte item2 = message.GetByte();
+                byte item3 = message.GetByte();
+                byte item4 = message.GetByte();
+                byte item5 = message.GetByte();
+                bool item6 = message.GetBool();
+                Debug.Log($"x:{item1} y: {item2} plantId={item3} animal={item4} statuscode{item5}");
+                PlantController.Instance.DoPlantGrowthEffectVoid(item1, item2, item3, item4, item5, item6);
+            }
+
+            for (int i = 0; i < effectsResponseCount; i++)
+            {
+                byte animalId = message.GetByte();
+                byte statusId = message.GetByte();
+                int damage = message.GetInt();
+                bool isKOed = message.GetBool();
+                float healthRatio = message.GetFloat();
+                GameEventRoutine gameEventParams = new GameEventRoutine();
+                gameEventParams.statusEffectId = statusId;
+                gameEventParams.animalId = animalId;
+                gameEventParams.targetId = -1;
+                gameEventParams.gameEvent = GameEvent.EndTurnEffects;
+                gameEventParams.addedHealth = damage;
+                gameEventParams.isKOed = isKOed;
+                gameEventParams.healthRatio = healthRatio;
+                gameEventParams.execute = StatusEffectController.Instance.StatusEffectRoutine;
+                GameEventRoutineManager.Instance.AddRoutine(gameEventParams);
+            }
+            
+            Debug.Log($"playerTurn: {playerTurn}");
+            GameLogic.Instance.UpdateTurn(playerTurn);
+        }
+        [MessageHandler((ushort)MessageResponseCodes.EndGameSignal)]
+        private static void HandleEndGame(Message message)
+        {
+            int winner = message.GetInt();
+            Debug.Log($"winner: Player {winner}");
+            GameLogic.Instance.EndGame();
+        }
+
+        [MessageHandler((ushort)MessageResponseCodes.PlantSeedSuccess)]
+        private static void HandlePlantSuccess(Message message)
+        {
+            int plantId = message.GetInt();
+            int x = message.GetInt();
+            int y = message.GetInt();
+            int seedId = message.GetInt();
+            byte playerNum = message.GetByte();
+            
+            PlantController.Instance.DoPlant(seedId, plantId, x, y, playerNum);
         }
         private static int flipX(int x)
         {

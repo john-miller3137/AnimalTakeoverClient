@@ -1,7 +1,13 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using Game;
+using Scripts.GameStructure;
 using SharedLibrary;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UIElements;
 using static UnityEngine.GraphicsBuffer;
 
 public class AttacksController : MonoBehaviour
@@ -25,8 +31,9 @@ public class AttacksController : MonoBehaviour
     }
 
     [SerializeField] private GameObject Camera, WorldLight, FireworkParticlePrefab, FireballParticlePrefab, testObject, testTarget, a0, a1, a2, a3, a4, a5;
-    [SerializeField] private GameObject FireAttackPrefab, FireballHitPrefab, LifeForceAttackPrefab, LifeForceHitPrefab;
-    private float worldLightIntensity_Default = 1f;
+    [SerializeField] private GameObject FireAttackPrefab, FireballHitPrefab, LifeForceAttackPrefab, LifeForceHitPrefab,
+        WaterAttackPrefab, WaterHitPrefab, DecayAttackPrefab, DecayHitPrefab, HealthTextPrefab;
+    private float worldLightIntensity_Default = .9f;
     private float worldLightIntensity_Decrease = 0.2f;
     private Light2D worldLight;
     private CameraShake _cameraShake;
@@ -48,7 +55,7 @@ public class AttacksController : MonoBehaviour
         //DoSpiritAttack(5, 0, SpiritType.LIFE);
     }
 
-    private IEnumerator MoveToPosition(GameObject animal, Vector3 targetPosition, float duration)
+    public IEnumerator MoveToPosition(GameObject animal, Vector3 targetPosition, float duration)
     {
         float elapsedTime = 0;
         Vector3 startingPos = animal.transform.position;
@@ -114,7 +121,7 @@ public class AttacksController : MonoBehaviour
                 Destroy(hitParticles, 1f);
                 break;
             case SpiritType.WATER:
-                hitParticles = Instantiate(FireballHitPrefab, explosionPosition, Quaternion.identity);
+                hitParticles = Instantiate(WaterHitPrefab, explosionPosition, Quaternion.identity);
                 Destroy(hitParticles, 1f);
                 break;
             case SpiritType.LIFE:
@@ -122,7 +129,7 @@ public class AttacksController : MonoBehaviour
                 Destroy(hitParticles, 1f);
                 break;
             case SpiritType.DECAY:
-                hitParticles = Instantiate(FireballHitPrefab, explosionPosition, Quaternion.identity);
+                hitParticles = Instantiate(DecayHitPrefab, explosionPosition, Quaternion.identity);
                 Destroy(hitParticles, 1f);
                 break;
         }
@@ -166,7 +173,113 @@ public class AttacksController : MonoBehaviour
 
 
     }
-    private IEnumerator DoLifeAttack(GameObject animal, GameObject target)
+    private IEnumerator DoWaterAttack(GameObject animal, GameObject target, int damage, bool isDead, float healthRatio, int targetId)
+    {
+        Vector3 animalPos = animal.transform.position;
+        byte direction = 0;
+        Vector3 targetPos;
+        if (target == null)
+        {
+            targetPos = new Vector3(animalPos.x, animalPos.y + 20, 0);
+        }
+        else
+        {
+            targetPos = target.transform.position;
+        }
+        
+        Vector3 ballSpawnPos;
+        if (animalPos.y < targetPos.y)
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y+1, 0);
+            direction = 0;
+        }
+        else
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y-1, 0);
+            direction = 2;
+        }
+        GameObject fireball = Instantiate(WaterAttackPrefab, ballSpawnPos, Quaternion.identity);
+
+        fireball.transform.localScale = new Vector3(0, 0, 0);
+        GameController.Instance.PlayFiringUpSound();
+        yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
+        StartCoroutine(MoveAnimalAttackSequence(animal, direction, .2f));
+        GameController.Instance.PlayLaunchSound();
+        yield return MoveToPosition(fireball, targetPos, .1f*Vector3.Distance(animalPos, targetPos));
+        _cameraShake.Shake();
+        StartCoroutine(FlashRed(target));
+        StartCoroutine(SpawnHealthText((int) targetPos.x, (int)targetPos.y, damage, Color.red));
+        
+        if (GameLogic.Instance.IsPlayerOne && targetId < 3)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        } else if (!GameLogic.Instance.IsPlayerOne && targetId >= 3 && targetId < 6)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        }
+        if (isDead)
+        {
+            StartCoroutine(HealthController.Instance.OnDeadAnimal(target, targetId));
+        }
+        StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.WATER));
+        GameController.Instance.PlayExplosionSound();
+        yield return MoveAnimalAttackSequence(target, direction, .15f);
+        yield return null;
+    }
+    private IEnumerator DoDecayAttack(GameObject animal, GameObject target, int damage, bool isDead, float healthRatio, int targetId)
+    {
+        Vector3 animalPos = animal.transform.position;
+        byte direction = 0;
+        Vector3 targetPos;
+        if (target == null)
+        {
+            targetPos = new Vector3(animalPos.x, animalPos.y + 20, 0);
+        }
+        else
+        {
+            targetPos = target.transform.position;
+        }
+        
+        Vector3 ballSpawnPos;
+        if (animalPos.y < targetPos.y)
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y+1, 0);
+            direction = 0;
+        }
+        else
+        {
+            ballSpawnPos = new Vector3(animalPos.x, animalPos.y-1, 0);
+            direction = 2;
+        }
+        GameObject fireball = Instantiate(DecayAttackPrefab, ballSpawnPos, Quaternion.identity);
+
+        fireball.transform.localScale = new Vector3(0, 0, 0);
+        GameController.Instance.PlayFiringUpSound();
+        yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
+        
+        StartCoroutine(MoveAnimalAttackSequence(animal, direction, .2f));
+        GameController.Instance.PlayLaunchSound();
+        yield return MoveToPosition(fireball, targetPos, .1f*Vector3.Distance(animalPos, targetPos));
+        _cameraShake.Shake();
+        StartCoroutine(FlashRed(target));
+        StartCoroutine(SpawnHealthText((int) targetPos.x, (int)targetPos.y, damage, Color.red));
+        if (GameLogic.Instance.IsPlayerOne && targetId < 3)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        } else if (!GameLogic.Instance.IsPlayerOne && targetId >= 3 && targetId < 6)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        }
+        if (isDead)
+        {
+            StartCoroutine(HealthController.Instance.OnDeadAnimal(target, targetId));
+        }
+        StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.DECAY));
+        GameController.Instance.PlayExplosionSound();
+        yield return MoveAnimalAttackSequence(target, direction, .15f);
+        yield return null;
+    }
+    private IEnumerator DoLifeAttack(GameObject animal, GameObject target, int damage, bool isDead, float healthRatio, int targetId)
     {
         Vector3 animalPos = animal.transform.position;
         byte direction = 0;
@@ -192,18 +305,33 @@ public class AttacksController : MonoBehaviour
             direction = 2;
         }
         GameObject fireball = Instantiate(LifeForceAttackPrefab, ballSpawnPos, Quaternion.identity);
-
+        GameController.Instance.PlayFiringUpSound();
         fireball.transform.localScale = new Vector3(0, 0, 0);
         yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
         StartCoroutine(MoveAnimalAttackSequence(animal, direction, .2f));
-        yield return MoveToPosition(fireball, targetPos, .7f);
-        yield return StartCoroutine(FlashRed(target));
-        StartCoroutine(MoveAnimalAttackSequence(target, direction, .15f));
+        GameController.Instance.PlayLaunchSound();
+        yield return MoveToPosition(fireball, targetPos, .1f*Vector3.Distance(animalPos, targetPos));
         _cameraShake.Shake();
-        yield return StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.LIFE));
+        StartCoroutine(FlashRed(target));
+        StartCoroutine(SpawnHealthText((int) targetPos.x, (int)targetPos.y, damage, Color.red));
+        
+        if (GameLogic.Instance.IsPlayerOne && targetId < 3)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        } else if (!GameLogic.Instance.IsPlayerOne && targetId >= 3 && targetId < 6)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        }
+        if (isDead)
+        {
+            StartCoroutine(HealthController.Instance.OnDeadAnimal(target, targetId));
+        }
+        StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.LIFE));
+        GameController.Instance.PlayExplosionSound();
+        yield return MoveAnimalAttackSequence(target, direction, .15f);
         yield return null;
     }
-    private IEnumerator DoFireAttack(GameObject animal, GameObject target)
+    private IEnumerator DoFireAttack(GameObject animal, GameObject target, int damage, bool isDead, float healthRatio, int targetId)
     {
         Vector3 animalPos = animal.transform.position;
         byte direction = 0;
@@ -229,15 +357,30 @@ public class AttacksController : MonoBehaviour
             direction = 2;
         }
         GameObject fireball = Instantiate(FireAttackPrefab, ballSpawnPos, Quaternion.identity);
-
+        GameController.Instance.PlayFiringUpSound();
         fireball.transform.localScale = new Vector3(0, 0, 0);
         yield return StartCoroutine(ScaleOverTime(fireball, maxFireballScale, 1f));
         StartCoroutine(MoveAnimalAttackSequence(animal, direction, .2f));
-        yield return MoveToPosition(fireball, targetPos, .7f);
-        yield return StartCoroutine(FlashRed(target));
-        StartCoroutine(MoveAnimalAttackSequence(target, direction, .15f));
+        GameController.Instance.PlayLaunchSound();
+        yield return MoveToPosition(fireball, targetPos, .1f*Vector3.Distance(animalPos, targetPos));
         _cameraShake.Shake();
-        yield return StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.FIRE));
+        StartCoroutine(FlashRed(target));
+        StartCoroutine(SpawnHealthText((int) targetPos.x, (int)targetPos.y, damage, Color.red));
+        
+        if (GameLogic.Instance.IsPlayerOne && targetId < 3)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        } else if (!GameLogic.Instance.IsPlayerOne && targetId >= 3 && targetId < 6)
+        {
+            HealthController.Instance.UpdateAnimalHealth(targetId, healthRatio);
+        }
+        if (isDead)
+        {
+            StartCoroutine(HealthController.Instance.OnDeadAnimal(target,targetId));
+        }
+        StartCoroutine(ExplodeCoroutine(fireball, target, SpiritType.FIRE));
+        GameController.Instance.PlayExplosionSound();
+        yield return MoveAnimalAttackSequence(target, direction, .15f);
         yield return null;
     }
     private IEnumerator DetachBoardLight(GameObject animal, float timePerMove)
@@ -246,6 +389,8 @@ public class AttacksController : MonoBehaviour
         boardLight.transform.SetParent(null);
         yield return new WaitForSeconds(timePerMove * 2);
         boardLight.transform.SetParent(animal.transform);
+        Vector3 animalPos = animal.transform.position;
+        boardLight.transform.position = new Vector3(animalPos.x, animalPos.y-0.2f, 0);
     }
     private IEnumerator MoveAnimalAttackSequence(GameObject animal, byte direction, float timePerMove)
     {
@@ -277,9 +422,10 @@ public class AttacksController : MonoBehaviour
                 yield return MoveToPosition(animal, animalPos, timePerMove);
                 break;
         }
-        
-    }
 
+        yield return null;
+    }
+/*
     public void DoAttack(int cardId, int animalId, int targetId)
     {
         switch (cardId)
@@ -297,16 +443,37 @@ public class AttacksController : MonoBehaviour
             case 10:
                 break;
             case 11:
-                DoSpiritAttack(animalId, targetId, SpiritType.FIRE);
+                DoSpiritAttack(animalId, targetId, SpiritType.FIRE, 0);
                 break;
             default:
                 break;
         }
     }
 
-    public void DoSpiritAttack(int animalId, int targetId, SpiritType spiritType)
+    */
+
+    public IEnumerator SpiritAttackRoutine(GameEventParams gameEventParams)
     {
-        if (animalId == targetId) return;
+        int animalId = gameEventParams.animalId;
+        int targetId = gameEventParams.targetId;
+        SpiritType spiritType = gameEventParams.spiritType;
+        int damage = gameEventParams.addedHealth;
+        bool isKOed = gameEventParams.isKOed;
+        bool spawnNewCrystal = gameEventParams.spawnNewCrystal;
+        byte newX = gameEventParams.newX;
+        byte newY = gameEventParams.newY;
+        byte crystalKey = gameEventParams.crystalKey;
+        float healthRatio = gameEventParams.healthRatio;
+        AttackModifiers[] modifiers = gameEventParams.attackModifier;
+        yield return DoSpiritAttack(animalId, targetId, spiritType, damage, isKOed, spawnNewCrystal, newX, newY,
+            crystalKey, healthRatio, modifiers);
+    }
+
+    public IEnumerator DoSpiritAttack(int animalId, int targetId, SpiritType spiritType, int damage, bool isDead, bool spawnNewCrystal,
+        byte newX, byte newY, byte crystalKey, float healthRatio, AttackModifiers[] modifiers)
+    {
+        if (animalId == targetId) yield break;
+        Debug.Log("modifiers: " + modifiers);
         GameObject animal, target;
         animal = GetAnimal(animalId);
         if (targetId == -1)
@@ -317,24 +484,105 @@ public class AttacksController : MonoBehaviour
         {
             target = GetAnimal(targetId);
         }
+        StartCoroutine(DestroyOrbs(animalId));
+        foreach (var modifier in modifiers)
+        {
+            switch (modifier)
+            {
+                case AttackModifiers.SHIELD:
+                    StartCoroutine(PlantController.Instance.DoShieldEffect());
+                    break;
+                case AttackModifiers.POPPY:
+                    StartCoroutine(PlantController.Instance.DoPoppyEffect());
+                    break;
+                case AttackModifiers.ELEPHANT_HEAL:
+                    StartCoroutine(AnimalEffectController.Instance.DoElephantEffect(animalId));
+                    break;
+                case AttackModifiers.HIPPO_DIRT:
+                    StartCoroutine(AnimalEffectController.Instance.DoHippoEffect(animalId));
+                    break;
+                case AttackModifiers.DRAGON_FIRE:
+                    StartCoroutine(AnimalEffectController.Instance.DoDragonEffect(animalId));
+                    break;
 
+            }
+        }
+        
+        
         switch (spiritType)
         {
             case SpiritType.FIRE:
-                StartCoroutine(DoFireAttack(animal, target));
+                yield return DoFireAttack(animal, target, damage, isDead, healthRatio, targetId);
+                if (spawnNewCrystal && GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.FIRE, crystalKey, newX +Constants.hor_offset
+                        , newY + Constants.vert_offset);
+                } else if (spawnNewCrystal && !GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.FIRE, crystalKey, GameLogic.flipX(newX) +Constants.hor_offset
+                        , GameLogic.flipY(newY) + Constants.vert_offset);
+                }
                 break;
             case SpiritType.WATER:
+                yield return DoWaterAttack(animal, target, damage, isDead, healthRatio, targetId);
+                if (spawnNewCrystal && GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.WATER, crystalKey, newX +Constants.hor_offset
+                        , newY + Constants.vert_offset);
+                } else if (spawnNewCrystal && !GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.WATER, crystalKey, GameLogic.flipX(newX) +Constants.hor_offset
+                        , GameLogic.flipY(newY) + Constants.vert_offset);
+                }
                 break;
             case SpiritType.LIFE:
-                StartCoroutine(DoLifeAttack(animal, target));
+                yield return (DoLifeAttack(animal, target, damage, isDead, healthRatio, targetId));
+                if (spawnNewCrystal && GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.LIFE, crystalKey, newX +Constants.hor_offset
+                        , newY + Constants.vert_offset);
+                } else if (spawnNewCrystal && !GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.LIFE, crystalKey, GameLogic.flipX(newX) +Constants.hor_offset
+                        , GameLogic.flipY(newY) + Constants.vert_offset);
+                }
                 break;
             case SpiritType.DECAY:
+                yield return (DoDecayAttack(animal, target, damage, isDead, healthRatio, targetId));
+                if (spawnNewCrystal && GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.DECAY, crystalKey, newX +Constants.hor_offset
+                        , newY + Constants.vert_offset);
+                } else if (spawnNewCrystal && !GameLogic.Instance.IsPlayerOne)
+                {
+                    CrystalController.Instance.SpawnCrystal((byte)SpiritType.DECAY, crystalKey, GameLogic.flipX(newX) +Constants.hor_offset
+                        , GameLogic.flipY(newY) + Constants.vert_offset);
+                }
                 break;
         }
-        
+
+        yield return null;
     }
 
-    private GameObject GetAnimal(int animalId)
+    private IEnumerator DestroyOrbs(int animalId)
+    {
+        GameObject animal = GetAnimal(animalId);
+        int childCount = animal.transform.GetChild(1).childCount;
+        List<GameObject> objectsToDestroy = new List<GameObject>();
+        for (int i = 0; i < childCount; i++)
+        {
+            objectsToDestroy.Add(animal.transform.GetChild(1).GetChild(i).gameObject);
+        }
+        foreach(GameObject go in objectsToDestroy)
+        {
+            go.transform.SetParent(null);
+            Destroy(go);
+        }
+
+        yield return null;
+    }
+
+    public GameObject GetAnimal(int animalId)
     {
         switch (animalId)
         {
@@ -397,5 +645,17 @@ public class AttacksController : MonoBehaviour
             default:
                 return null;
         }
+    }
+
+    public IEnumerator SpawnHealthText(int x, int y, int damage, Color color)
+    {
+        GameObject text = Instantiate(HealthTextPrefab, new Vector3(x, y + 1, 0), Quaternion.identity);
+        TextMeshProUGUI textMeshProUGUI = text.transform.GetChild(0).GetChild(0).GetComponent<TextMeshProUGUI>();
+        textMeshProUGUI.text = damage.ToString();
+        textMeshProUGUI.color = new Color(color.r, color.g, color.b, color.a);
+        textMeshProUGUI.faceColor = new Color(color.r, color.g, color.b, color.a);
+        
+        Destroy(text, 2);
+        yield return null;
     }
 }

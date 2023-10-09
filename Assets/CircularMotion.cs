@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Reflection;
-using FunkyCode;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -18,6 +17,7 @@ public class CircularMotion : MonoBehaviour
 
     private void Start()
     {
+        gameObject.transform.SetParent(centerPoint.transform.GetChild(1));
         pSystems = new List<ParticleSystemRenderer>();
         int childCount = gameObject.transform.GetChild(0).childCount;
         for(int i = 0; i < childCount - 1; i++)

@@ -16,9 +16,9 @@ TagManager:
   - PostProcessing
   - Lights
   - Animals
-  - 
-  - 
-  - 
+  - Crystal
+  - MoveTile
+  - GUI
   - 
   - 
   - 
@@ -61,11 +61,17 @@ TagManager:
   - name: Animals
     uniqueID: 2613795893
     locked: 0
+  - name: PlantEffectsOverlay
+    uniqueID: 4038840329
+    locked: 0
   - name: SpiritParticles
     uniqueID: 3881714663
     locked: 0
   - name: Hats
     uniqueID: 3416173545
+    locked: 0
+  - name: HealthText
+    uniqueID: 2784716981
     locked: 0
   - name: HealthHolder
     uniqueID: 235858859
@@ -81,4 +87,7 @@ TagManager:
     locked: 0
   - name: Transition
     uniqueID: 817017845
+    locked: 0
+  - name: ShownCrystals
+    uniqueID: 4160462827
     locked: 0

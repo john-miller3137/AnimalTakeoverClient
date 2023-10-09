@@ -67,7 +67,8 @@ public class NetworkManager : MonoBehaviour
     }
     public void SendTokenAndKey()
     {
-        MainClient.Send(Message.Create(MessageSendMode.Unreliable, (ushort)MessageResponseCodes.SendToken).AddString(MessageHandlers.Key).AddString(InputLogic.Token));
+        Debug.Log("token and key sending");
+        MainClient.Send(Message.Create(MessageSendMode.Reliable, (ushort)MessageResponseCodes.SendToken).AddString(MessageHandlers.Key).AddString(InputLogic.Token));
     }
     public void FixedUpdate()
     {
@@ -85,6 +86,7 @@ public class NetworkManager : MonoBehaviour
         {
             try
             {
+                Debug.Log("trying to connect...");
                 await Task.Delay(1000, cts.Token);
             }
             catch (TaskCanceledException)

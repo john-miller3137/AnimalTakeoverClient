@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Network;
 using UnityEngine;
 using UnityEngine.UI;
@@ -29,9 +30,11 @@ namespace Game
         [SerializeField] private Sprite[] healthHeadSprites;
         [SerializeField] private GameObject[] healthHeads, healthBars;
         private Slider a0Slider, a1Slider, a2Slider;
+        private object KOLock;
 
         private void Start()
         {
+            KOLock = new object();
             a0Slider = healthBars[0].GetComponent<Slider>();
             a1Slider = healthBars[1].GetComponent<Slider>();
             a2Slider = healthBars[2].GetComponent<Slider>();
@@ -82,41 +85,41 @@ namespace Game
             }
         }
 
-        public void OnDeadAnimal(int animalId)
-        {
-            int targetId = animalId;
-            if (!GameLogic.Instance.IsPlayerOne)
-            {
-                targetId = MessageHandlers.SwitchAnimal(animalId);
-            }
-
-            switch (targetId)
-            {
-                case 0: 
-                    DoDeath(GameLogic.Instance.myAnimal0);
-                    break;
-                case 1:
-                    DoDeath(GameLogic.Instance.myAnimal1);
-                    break;
-                case 2:
-                    DoDeath(GameLogic.Instance.myAnimal2);
-                    break;
-                case 3: 
-                    DoDeath(GameLogic.Instance.enemyAnimal0);
-                    break;
-                case 4:
-                    DoDeath(GameLogic.Instance.enemyAnimal1);
-                    break;
-                case 5:
-                    DoDeath(GameLogic.Instance.enemyAnimal2);
-                    break;
-            }
-        }
-
-        private void DoDeath(GameObject animal)
+        public IEnumerator OnDeadAnimal(GameObject animal, int targetId)
         {
             animal.SetActive(false);
+            yield return new WaitForSeconds(1);
+            animal.transform.position = new Vector3(5, 11, 0);
+            lock (KOLock)
+            {
+                if (GameLogic.Instance.IsPlayerOne)
+                {
+                    if (targetId < 3)
+                    {
+                        GameLogic.Instance.myDeadAnimals.Add(targetId);
+                    }
+                    else
+                    {
+                        GameLogic.Instance.enemyDeadAnimals.Add(targetId);
+                    }
+                    
+                }
+                else
+                {
+                    if (MessageHandlers.SwitchAnimal(targetId) < 3)
+                    {
+                        GameLogic.Instance.myDeadAnimals.Add(MessageHandlers.SwitchAnimal(targetId));
+                    }
+                    else
+                    {
+                        GameLogic.Instance.enemyDeadAnimals.Add(MessageHandlers.SwitchAnimal(targetId));
+                    }
+                }
+            }
+           
+            yield return null;
         }
+        
     }
     
 }

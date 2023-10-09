@@ -10,8 +10,27 @@ using UnityEngine.SceneManagement;
 
 public class InputLogic : MonoBehaviour
 {
+    private static InputLogic instance;
+    public static InputLogic Instance
+    
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindObjectOfType<InputLogic>();
+                if (instance == null)
+                {
+                    GameObject go = new GameObject("InputLogic");
+                    instance = go.AddComponent<InputLogic>();
+                }
+            }
+            return instance;
+        }
+    }
+    
     private string domainUrl = "https://localhost:7200";
-    private string domainUrl2 = "https://73.252.141.178:7200";
+    private string domainUrl2 = "https://24.6.211.107:7201";
     private string requestUrl;
     private string _username;
     private string _password;
@@ -19,18 +38,21 @@ public class InputLogic : MonoBehaviour
     private bool localhost = true;
     private NetworkManager networkManager;
     [SerializeField] private GameObject inputLogic, localhostButtonText, loginUI, findGameButton;
-    [SerializeField] private GameObject loginDisplay;
+    [SerializeField] private GameObject loginDisplay, optionsBackground;
     public static string Token
     {
         get { return _token; }
         set { _token = value; }
     }
-    [SerializeField] private string ip = "73.252.141.178";
-    [SerializeField] private ushort port = 7200;
+    [SerializeField] private string ip = "24.6.211.107";
+    [SerializeField] private ushort port = 7201;
+    [SerializeField] private GameObject menuSong;
+    private AudioSource menuSource;
 
     // Start is called before the first frame update
     void Start()
     {
+        menuSource = menuSong.GetComponent<AudioSource>();
         if(inputLogic != null)
         {
             networkManager = inputLogic.GetComponent<NetworkManager>();
@@ -41,7 +63,12 @@ public class InputLogic : MonoBehaviour
         {
             SceneManager.LoadSceneAsync("GameScene1", LoadSceneMode.Additive);
         }
-        
+        menuSource.Play();
+    }
+
+    public void StopMenuSource()
+    {
+        menuSource.Stop();
     }
 
     // Update is called once per frame
@@ -78,6 +105,7 @@ public class InputLogic : MonoBehaviour
             if(Token.Length == 16)
             {
                 HideUI();
+                ShowPlayOptions();
                 findGameButton.SetActive(true);
             }
             if (JsonConvert.DeserializeObject<AuthenticationResponse>(HttpClient.postResponse).Token == "Success")
@@ -87,6 +115,10 @@ public class InputLogic : MonoBehaviour
         }
     }
 
+    public void ShowPlayOptions()
+    {
+        
+    }
     public async void OnRegister()
     {
         if (_username == null || _password == null) return;
@@ -115,8 +147,8 @@ public class InputLogic : MonoBehaviour
         if(localhost)
         {
             localhost = false;
-            networkManager.Ip = "73.252.141.178";
-            networkManager.Port = 7777;
+            networkManager.Ip = "24.6.211.107";
+            networkManager.Port = 7778;
             requestUrl = domainUrl2;
             localhostButtonText.GetComponent<Text>().text = "IP";
         } else
@@ -128,9 +160,10 @@ public class InputLogic : MonoBehaviour
             localhostButtonText.GetComponent<Text>().text = "Localhost";
         }
     }
-    public void LoadGameScene1()
+    public void EndGame()
     {
-       // loginDisplay.SetActive(false);
+        loginDisplay.SetActive(true);
+        NetworkManager.Singleton.MainClient.Disconnect();
         //SceneManager.UnloadSceneAsync("LoginRegisterScene");
     }
 }

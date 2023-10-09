@@ -3,17 +3,14 @@ using UnityEngine;
 
 public class CameraShake : MonoBehaviour
 {
-    public float shakeDuration = 0.5f;
-    public float shakeMagnitude = 0.1f;
-
     private Vector3 originalPosition;
 
-    public void Shake()
+    public void Shake(float shakeDuration = 0.5f, float shakeMagnitude = 0.1f)
     {
-        StartCoroutine(ShakeCoroutine());
+        StartCoroutine(ShakeCoroutine(shakeDuration, shakeMagnitude));
     }
 
-    private IEnumerator ShakeCoroutine()
+    private IEnumerator ShakeCoroutine(float shakeDuration = 0.5f, float shakeMagnitude = 0.1f)
     {
         originalPosition = transform.localPosition;
 

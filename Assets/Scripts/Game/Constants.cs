@@ -1,6 +1,8 @@
 ﻿using System;
 public class Constants
 {
+    public const int vert_offset = -6;
+    public const int hor_offset = -4;
     public const int max_x = 9;
     public const int max_y = 17;
     public static readonly int max_animals = 6;
