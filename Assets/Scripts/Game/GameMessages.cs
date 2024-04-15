@@ -29,5 +29,14 @@ namespace Game
             NetworkManager.Singleton.MainClient.Send(message);
         }
         
+        public static void SendEmoteRequest(EmoteCodes emoteCode)
+        {
+            Message message =
+                Message.Create(MessageSendMode.Reliable, (ushort)MessageResponseCodes.EmoteRequest);
+            message.AddString(MessageHandlers.Key);
+            message.AddInt(MessageHandlers.RoomId);
+            message.AddInt((int)emoteCode);
+            NetworkManager.Singleton.MainClient.Send(message);
+        }
     }
 }

@@ -41,15 +41,20 @@ namespace Game
                 case (byte) StatusEffect.THAW:
                     StartCoroutine(PlantController.Instance.DoThawEffect(animal));
                     break;
+                case (byte) StatusEffect.NULLIFIED:
+                    StartCoroutine(AnimalEffectController.Instance.DoDinoUnExtinct(animalId));
+                    break;
                 default:
                     break;
                 
             }
 
-            if (GameLogic.Instance.IsPlayerOne && animalId < 3)
+            int n = GameLogic.Instance.numberOfAnimals;
+            int n2 = n/ 2;
+            if (GameLogic.Instance.IsPlayerOne && animalId < n2)
             {
                 HealthController.Instance.UpdateAnimalHealth(animalId, healthRatio);
-            } else if (!GameLogic.Instance.IsPlayerOne && animalId >= 3 && animalId < 6)
+            } else if (!GameLogic.Instance.IsPlayerOne && animalId >= n2 && animalId < n)
             {
                 HealthController.Instance.UpdateAnimalHealth(animalId, healthRatio);
             }

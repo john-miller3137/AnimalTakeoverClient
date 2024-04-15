@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq.Expressions;
 using SharedLibrary;
 using UnityEditor;
+using UnityEngine.Rendering;
 
 namespace Scripts.GameStructure
 {
@@ -31,6 +32,17 @@ namespace Scripts.GameStructure
         public byte statusEffectId;
         public float healthRatio;
         public AttackModifiers[] attackModifier;
+        public int addedXp;
+        public float xpRatio;
+        public bool addedMove;
+        public bool isDead1;
+        public bool isDead2;
+        public float healthRatio1;
+        public float healthRatio2;
+        public int damage;
+        public int tX;
+        public int tY;
+        public int playerNum;
         
         public Func<GameEventParams, IEnumerator> execute;
 
@@ -38,7 +50,8 @@ namespace Scripts.GameStructure
         {
             GameEventParams eventParams = new GameEventParams(animalId, targetId, itemId, gameEvent, x, y, plantEffectId,
                 crystalKey, crystalId, addedHealth, effectId, oldCrystalKey, oldX, oldY, spiritType, newX, newY, isKOed, 
-                spawnNewCrystal, spawnDirt, statusEffectId, healthRatio, attackModifier);
+                spawnNewCrystal, spawnDirt, statusEffectId, healthRatio, attackModifier, addedXp, xpRatio, addedMove,
+                isDead1, isDead2, healthRatio1, healthRatio2, damage, tX, tY, playerNum);
             yield return execute?.Invoke(eventParams);
         }
     }
@@ -68,11 +81,28 @@ namespace Scripts.GameStructure
         public byte statusEffectId;
         public float healthRatio;
         public AttackModifiers[] attackModifier;
+        public int addedXp;
+        public float xpRatio;
+        public bool addedMove;
+        public bool isDead1;
+        public bool isDead2;
+        public float healthRatio1;
+        public float healthRatio2;
+        public int damage;
+        public int tX;
+        public int tY;
+        public int playerNum;
 
-        public GameEventParams(int animalId, int targetId, ItemId itemId, GameEvent gameEvent, int x, int y, PlantEffectId plantEffectId,
-            byte crystalKey, byte crystalId, int addedHealth, int effectId, int oldCrystalKey, int oldX, int oldY, SpiritType spiritType,
-            byte newX, byte newY, bool isKOed, bool spawnNewCrystal, bool spawnDirt, byte statusEffectId, float healthRatio,
-            AttackModifiers[] attackModifier)
+        public GameEventParams(int animalId, int targetId, ItemId itemId, GameEvent gameEvent, int x, int y,
+            PlantEffectId plantEffectId,
+            byte crystalKey, byte crystalId, int addedHealth, int effectId, int oldCrystalKey, int oldX, int oldY,
+            SpiritType spiritType,
+            byte newX, byte newY, bool isKOed, bool spawnNewCrystal, bool spawnDirt, byte statusEffectId,
+            float healthRatio,
+            AttackModifiers[] attackModifier, int addedXp, float xpRatio, bool addedMove, bool isDead1, bool isDead2,
+            float healthRatio1,
+            float healthRatio2, int damage, int tX, int tY, int playerNum)
+
         {
             this.animalId = animalId;
             this.targetId = targetId;
@@ -97,6 +127,18 @@ namespace Scripts.GameStructure
             this.statusEffectId = statusEffectId;
             this.healthRatio = healthRatio;
             this.attackModifier = attackModifier;
+            this.addedXp = addedXp;
+            this.xpRatio = xpRatio;
+            this.addedMove = addedMove;
+            this.isDead1 = isDead1;
+            this.isDead2 = isDead2;
+            this.healthRatio1 = healthRatio1;
+            this.healthRatio2 = healthRatio2;
+            this.damage = damage;
+            this.tX = tX;
+            this.tY = tY;
+            this.playerNum = playerNum;
+
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Game
             {
                 if (instance == null)
                 {
-                    instance = FindObjectOfType<TimerController>();
+                    instance = FindFirstObjectByType<TimerController>();
                     if (instance == null)
                     {
                         GameObject go = new GameObject("TimerController");
@@ -30,10 +30,10 @@ namespace Game
         private Slider timerSlider;
         public bool doCountdown;
         private float turnTimer;
-        private const float turnTime = 10;
+        private const float turnTime = 11.8f;
         private void Start()
         {
-            turnTimer = 9.8f;
+            turnTimer = turnTime;
             timerSlider = timerBar.GetComponent<Slider>();
         }
 
@@ -52,7 +52,7 @@ namespace Game
         }
         public void SetTimerFull()
         {
-            turnTimer = 9.8f;
+            turnTimer = turnTime;
             doCountdown = false;
             timerSlider.value = 1;
         }

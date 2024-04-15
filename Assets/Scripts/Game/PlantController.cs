@@ -34,14 +34,29 @@ namespace Game
 
         public GameObject dirt, poisonPlant1, poisonPlant2, icePlant1, icePlant2, flowerPlant1, poppy2, dandelion2, 
             marigold2, turrentPlant1, turretPlant2, poisonParticles, frozenEffect, ringDisplay, poppyEffect, turretShot,
-            shield2, shieldEffect;
-        public List<GameObject> dirtTiles;
-        public Dictionary<(int, int), GameObject> plantObjects, poppyObjects, shieldObjects;
+            shield2, shieldEffect,
+            tadpole;
+        public Dictionary<(int, int), GameObject> plantObjects, poppyObjects, shieldObjects,
+            animalItems, tadpoles, dirtTiles;
         private const int gameBoardOffsetX = 4;
         private const int gameBoardOffsetY = 6;
         public object dirtLock = new object();
         public void SpawnDirtTile(int x, int y, bool enableTC)
         {
+            lock (dirtLock)
+            {
+                if (dirtTiles.ContainsKey((x, y)))
+                {
+                    Destroy(dirtTiles[(x, y)]);
+                    dirtTiles.Remove((x, y));
+                }
+            }
+
+            if (plantObjects.ContainsKey((x, y)))
+            {
+                Destroy(plantObjects[(x,y)]);
+                plantObjects.Remove((x, y));
+            }
             GameObject dirt = Instantiate(this.dirt, new Vector3((float)x + Constants.hor_offset,
                 (float)y + Constants.vert_offset), Quaternion.identity);
             if (!enableTC)
@@ -50,17 +65,39 @@ namespace Game
             }
             lock (dirtLock)
             {
-                dirtTiles.Add(dirt);
+                dirtTiles.Add((x,y),dirt);
             }
-            
+
+            if (plantObjects.ContainsKey((x, y)))
+            {
+                Destroy(plantObjects[(x,y)]);
+                plantObjects.Remove((x, y));
+            }
+        }
+
+        public void DisableDirtColliders()
+        {
+            lock (dirtLock)
+            {
+                foreach (GameObject dirt in dirtTiles.Values)
+                {
+                    dirt.transform.GetChild(0).GetComponent<BoxCollider2D>().enabled = false;
+                }
+            }
+        }
+        
+        public void EnableDirtColliders()
+        {
+            MoveController.Instance.UpdateDirtTileColliders();
         }
 
         private void Start()
         {
+            animalItems = new Dictionary<(int, int), GameObject>();
             shieldObjects = new Dictionary<(int, int), GameObject>();
             poppyObjects = new Dictionary<(int, int), GameObject>();
             plantObjects = new Dictionary<(int, int), GameObject>();
-            dirtTiles = new List<GameObject>();
+            dirtTiles = new Dictionary<(int, int), GameObject>();
         }
 
         private void Update()
@@ -81,15 +118,19 @@ namespace Game
                     int newX = Mathf.RoundToInt(x) + gameBoardOffsetX;
                     int newY = Mathf.RoundToInt(y) + gameBoardOffsetY;
 
-                    Debug.Log($"{newX} {newY}");
+                    Debug.Log($"send plant request {newX} {newY}");
                     GameMessages.SendPlantRequest((int)itemId, newX, newY);
                 }
             }
         }
 
         public void DoPlant(int seedId, int plantId, int x, int y, byte playerNum)
-        { 
-            Debug.Log("seed and plantids"+ seedId + " " + plantId);
+        {
+            byte playerCode = (byte)GameLogic.Instance.playerNum;
+            if (playerNum == playerCode)
+            {
+                InventoryController.Instance.DoRemoveItemFromInventory(seedId);
+            }
             if (GameLogic.Instance.IsPlayerOne)
             {
                 switch (plantId)
@@ -98,64 +139,43 @@ namespace Game
                         GameObject iceplant1 = Instantiate(icePlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), iceplant1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.poison_plant1_id:
                         GameObject poisonplant1 = Instantiate(poisonPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), poisonplant1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.poppy_plant1:
                         GameObject poppy1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), poppy1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.dandelion1:
                         GameObject dandelion1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), dandelion1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.marigold1:
                         GameObject marigold1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), marigold1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.turrent_plant1:
                         GameObject turret1 = Instantiate(turrentPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), turret1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.shield1:
                         GameObject shield1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), shield1);
-                        if (playerNum == 1)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     default:
                         break;
@@ -171,64 +191,43 @@ namespace Game
                         GameObject iceplant1 = Instantiate(icePlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), iceplant1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                       
                         break;
                     case ConstantVars.poison_plant1_id:
                         GameObject poisonplant1 = Instantiate(poisonPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), poisonplant1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.poppy_plant1:
                         GameObject poppy1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), poppy1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.dandelion1:
                         GameObject dandelion1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), dandelion1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.marigold1:
                         GameObject marigold1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), marigold1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                       
                         break;
                     case ConstantVars.turrent_plant1:
                         GameObject turret1 = Instantiate(turrentPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), turret1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     case ConstantVars.shield1:
                         GameObject shield1 = Instantiate(flowerPlant1, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
                         plantObjects.Add((x, y), shield1);
-                        if (playerNum == 2)
-                        {
-                            InventoryController.Instance.DoRemoveItemFromInventory(seedId);
-                        }
+                        
                         break;
                     default:
                         break;
@@ -244,25 +243,27 @@ namespace Game
         public IEnumerator DoPlantGrowthEffect(byte x, byte y, byte newPlantId, byte animalId, byte statusEffectId, bool isKOED)
         {
             if (x > 100 || y > 100) yield break;
-
+            
             if (GameLogic.Instance.IsPlayerOne)
             {
                 
                 switch (newPlantId)
                 {
                     case ConstantVars.ice_plant2_id:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
                         GameObject iceplant2 = Instantiate(icePlant2, new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0), Quaternion.identity);
+                        
                         plantObjects[(x, y)] = iceplant2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
                         StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0)));
                         break;
                     case ConstantVars.poison_plant2_id:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
@@ -273,9 +274,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0)));
                         plantObjects[(x, y)] = poisonplant1;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
                         break;
                     case ConstantVars.poppy_plant2:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
@@ -285,9 +287,10 @@ namespace Game
                             y + Constants.vert_offset, 0)));
                         plantObjects[(x, y)] = poppy2;
                         poppyObjects[(x, y)] = poppy2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
                         break;
                     case ConstantVars.marigold2:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
@@ -296,9 +299,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0)));
                         plantObjects[(x, y)] = marigold2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
                         break;
                     case ConstantVars.turrent_plant2:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
@@ -307,9 +311,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0)));
                         plantObjects[(x, y)] = turret2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
                         break;
                     case ConstantVars.dandelion2:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
@@ -318,9 +323,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
                             y + Constants.vert_offset, 0)));
                         plantObjects[(x, y)] = dandelion2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
                         break;
                     case ConstantVars.shield2:
-                        if (plantObjects[(x, y)])
+                        if (plantObjects[(x, y)] != null)
                         {
                             Destroy(plantObjects[((int)x, (int)y)]);
                         }
@@ -330,9 +336,37 @@ namespace Game
                             y + Constants.vert_offset, 0)));
                         plantObjects[(x, y)] = shield2;
                         shieldObjects[(x, y)] = shield2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(x,y)]);
+                        break;
+                    case ConstantVars.tadpole:
+                        if (animalItems[(x, y)] != null)
+                        {
+                            Destroy(animalItems[((int)x, (int)y)]);
+                        }
+                        GameObject tadpole = Instantiate(this.tadpole, new Vector3(x + Constants.hor_offset,
+                            y + Constants.vert_offset, 0), Quaternion.identity);
+                        StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
+                            y + Constants.vert_offset, 0)));
+                        animalItems[(x, y)] = tadpole;
+                        CrystalController.Instance.UpdateLayerCrystal(animalItems[(x,y)]);
+                        AnimalEffectController.Instance.tadpolesList.Add(tadpole);
+                        break;
+                    case ConstantVars.tadpole_on_dirt:
+                        if (animalItems[(x, y)] != null)
+                        {
+                            Destroy(animalItems[((int)x, (int)y)]);
+                        }
+                        GameObject tadpole2 = Instantiate(this.tadpole, new Vector3(x + Constants.hor_offset,
+                            y + Constants.vert_offset, 0), Quaternion.identity);
+                        StartCoroutine(PlayRingEffect(new Vector3(x + Constants.hor_offset,
+                            y + Constants.vert_offset, 0)));
+                        animalItems[(x, y)] = tadpole2;
+                        CrystalController.Instance.UpdateLayerCrystal(animalItems[(x,y)]);
+                        AnimalEffectController.Instance.tadpolesList.Add(tadpole2);
                         break;
 
                 }
+                
             }
             else
             {
@@ -342,7 +376,7 @@ namespace Game
                 switch (newPlantId)
                 {
                     case ConstantVars.ice_plant2_id:
-                        if (plantObjects[(newX, newY)])
+                        if (plantObjects[(newX, newY)] != null)
                         {
                             Destroy(plantObjects[(newX, newY)]);
                         }
@@ -351,9 +385,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
                             newY + Constants.vert_offset, 0)));
                         plantObjects[(newX, newY)] = iceplant1;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
                         break;
                     case ConstantVars.poison_plant2_id:
-                        if (plantObjects[(newX, newY)])
+                        if (plantObjects[(newX, newY)] != null)
                         {
                             Destroy(plantObjects[(newX, newY)]);
                         }
@@ -364,9 +399,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
                             newY + Constants.vert_offset, 0)));
                         plantObjects[(newX, newY)] = poisonplant1;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
                         break;
                     case ConstantVars.poppy_plant2:
-                        if (plantObjects[(newX, newY)])
+                        if (plantObjects[(newX, newY)] != null)
                         {
                             Destroy(plantObjects[(newX, newY)]);
                         }
@@ -376,9 +412,10 @@ namespace Game
                             newY + Constants.vert_offset, 0)));
                         plantObjects[(newX, newY)] = poppy2;
                         poppyObjects[(newX, newY)] = poppy2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
                         break;
                     case ConstantVars.marigold2:
-                        if (plantObjects[(newX, newY)])
+                        if (plantObjects[(newX, newY)] != null)
                         {
                             Destroy(plantObjects[(newX, newY)]);
                         }
@@ -387,11 +424,12 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
                             newY + Constants.vert_offset, 0)));
                         plantObjects[(newX, newY)] = marigold2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
                         break;
                     case ConstantVars.turrent_plant2:
                         //if (statusEffectId != (byte)(StatusEffect.TURRET))
                         //{
-                            if (plantObjects[(newX, newY)])
+                            if (plantObjects[(newX, newY)] != null)
                             {
                                 Destroy(plantObjects[(newX, newY)]);
                             }
@@ -400,10 +438,11 @@ namespace Game
                             StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
                                 newY + Constants.vert_offset, 0)));
                             plantObjects[(newX, newY)] = turret2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
                        // }
                         break;
                     case ConstantVars.dandelion2:
-                        if (plantObjects[(newX, newY)])
+                        if (plantObjects[(newX, newY)] != null)
                         {
                             Destroy(plantObjects[(newX, newY)]);
                         }
@@ -412,9 +451,10 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
                             newY + Constants.vert_offset, 0)));
                         plantObjects[(newX, newY)] = dandelion2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
                         break;
                     case ConstantVars.shield2:
-                        if (plantObjects[(newX, newY)])
+                        if (plantObjects[(newX, newY)] != null)
                         {
                             Destroy(plantObjects[(newX, (int)newY)]);
                         }
@@ -423,7 +463,36 @@ namespace Game
                         StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
                             newY + Constants.vert_offset, 0)));
                         plantObjects[(newX, newX)] = shield2;
-                        shieldObjects[(x, y)] = shield2;
+                        shieldObjects[(newX, newY)] = shield2;
+                        CrystalController.Instance.UpdateLayerCrystal(plantObjects[(newX,newY)]);
+                        break;
+                    case ConstantVars.tadpole:
+                        if (animalItems[(newX, newY)] != null)
+                        {
+                            Destroy(animalItems[(newX, newY)]);
+                            AnimalEffectController.Instance.tadpolesList.Remove(animalItems[(newX, newY)]);
+                        }
+                        GameObject tadpole = Instantiate(this.tadpole, new Vector3(newX + Constants.hor_offset,
+                            newY + Constants.vert_offset, 0), Quaternion.identity);
+                        StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
+                            newY + Constants.vert_offset, 0)));
+                        animalItems[(newX, newY)] = tadpole;
+                        CrystalController.Instance.UpdateLayerCrystal(animalItems[(newX,newY)]);
+                        AnimalEffectController.Instance.tadpolesList.Add(tadpole);
+                        break;
+                    case ConstantVars.tadpole_on_dirt:
+                        if (animalItems[(newX, newY)] != null)
+                        {
+                            Destroy(animalItems[(newX, newY)]);
+                            AnimalEffectController.Instance.tadpolesList.Remove(animalItems[(newX, newY)]);
+                        }
+                        GameObject tadpole2 = Instantiate(this.tadpole, new Vector3(newX + Constants.hor_offset,
+                            newY + Constants.vert_offset, 0), Quaternion.identity);
+                        StartCoroutine(PlayRingEffect(new Vector3(newX + Constants.hor_offset,
+                            newY + Constants.vert_offset, 0)));
+                        animalItems[(newX, newY)] = tadpole2;
+                        CrystalController.Instance.UpdateLayerCrystal(animalItems[(newX,newY)]);
+                        AnimalEffectController.Instance.tadpolesList.Add(tadpole2);
                         break;
 
                 }
@@ -532,6 +601,7 @@ namespace Game
             List<GameObject> objectsToDestroy = new List<GameObject>();
             foreach (GameObject poppy in poppyObjects.Values)
             {
+                if(poppy == null) continue;
                 GameObject go = Instantiate(poppyEffect, poppy.transform.position, quaternion.identity);
                 objectsToDestroy.Add(go);
             }
@@ -548,6 +618,7 @@ namespace Game
             List<GameObject> objectsToDestroy = new List<GameObject>();
             foreach (GameObject shield in shieldObjects.Values)
             {
+                if(shield == null) continue;
                 GameObject go = Instantiate(shieldEffect, shield.transform.position, quaternion.identity);
                 objectsToDestroy.Add(go);
             }
@@ -580,7 +651,7 @@ namespace Game
             turretPlant.GetComponent<Animator>()?.Play("TurretShootAnimation");
             GameObject bullet = Instantiate(turretShot, firePos, Quaternion.identity);
             yield return AttacksController.Instance.MoveToPosition(
-                bullet, animalPos, .15f*Vector3.Distance(animalPos, bullet.transform.position));
+                bullet, animalPos, .15f*Vector3.Distance(animalPos, bullet.transform.position), true);
             StartCoroutine(AttacksController.Instance.SpawnHealthText(
                 Mathf.RoundToInt(animalPos.x), Mathf.RoundToInt(animalPos.y), 20, Color.red));
             if (isKOED)
@@ -633,6 +704,22 @@ namespace Game
             }
 
             sr.color = endColor;
+        }
+
+        public IEnumerator ReplacePlantsWithDirt()
+        {
+            List<GameObject> objects = new List<GameObject>(plantObjects.Values);
+            foreach(var plant in objects)
+            {
+                if(plant == null) continue;
+                var position = plant.transform.position;
+                SpawnDirtTile(Mathf.RoundToInt(position.x) - Constants.hor_offset, 
+                    Mathf.RoundToInt(position.y)- Constants.vert_offset, true);
+            }
+            
+            
+            plantObjects.Clear();
+            yield return null;
         }
     }
 }

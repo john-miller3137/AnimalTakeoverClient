@@ -8,6 +8,8 @@ using Network;
 using SharedLibrary;
 using System.Threading;
 using System.Threading.Tasks;
+using Game;
+using Scripts.LoginRegister;
 
 public class NetworkManager : MonoBehaviour
 {
@@ -49,21 +51,47 @@ public class NetworkManager : MonoBehaviour
     {
         RiptideLogger.Initialize(Debug.Log, true);
         MainClient = new Client(new UdpClient(SocketMode.IPv4Only));
+       // NetworkManager.Singleton.MainClient.Disconnected += Disconnected();
     }
     public async void StartMatchmaking()
     {
-        if (MainClient.IsConnected)
+        InputLogic.Instance.shopButton.SetActive(false);
+        InputLogic.Instance.cancelButton.SetActive(true);
+        InputLogic.Instance.findGameButton.SetActive(false);
+        InputLogic.Instance.findGameTwosButton.SetActive(false);
+        InputLogic.Instance.animalInfoButton.SetActive(false);
+        InputLogic.Instance.findGameTwosAiButton.SetActive(false);
+        MainMenuController.Instance.searchingText.SetActive(true);
+        MainMenuController.Instance.searchingForGame = true;
+    }
+    public void StartMatchmakingDefault()
+    {
+        StartMatchmaking();
+        MessageHandlers.StartMatchmakingDefault();
+    }
+    public void StartMatchmakingTwos()
+    {
+        StartMatchmaking();
+        MessageHandlers.StartMatchmakingTwos();
+    }
+    
+    public void StartMatchmakingTwosAI()
+    {
+        StartMatchmaking();
+        MessageHandlers.StartMatchmakingTwosAI();
+    }
+    private EventHandler<DisconnectedEventArgs> Disconnected()
+    {
+        if (GameLogic.Instance.gameStarted)
         {
-            MainClient.Disconnect();
+            InputLogic.Instance.EndGame();
+            GameLogic.Instance.EndGame();
         }
-        if (MainClient.IsNotConnected)
+        else if (InputLogic.Instance.loggedIn)
         {
-            MainClient.Connect($"{ip}:{port}");
+            MainMenuController.Instance.CancelButton();
         }
-        await WaitForConnection();
-        MainClient.Connection.CanTimeout = false;
-        SendTokenAndKey();
-        
+        return null;
     }
     public void SendTokenAndKey()
     {
@@ -79,7 +107,7 @@ public class NetworkManager : MonoBehaviour
         MainClient.Disconnect();
     }
 
-    async Task WaitForConnection()
+    public async Task WaitForConnection()
     {
         CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         while (!MainClient.IsConnected)

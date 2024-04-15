@@ -29,7 +29,8 @@ namespace Game
             }
         }
 
-        [SerializeField] private GameObject fireCrystalPrefab, fireSpiritPrefab,
+        public GameObject fireSpiritPrefab;
+        [SerializeField] private GameObject fireCrystalPrefab,
             commonCrystalPrefab, uncommonCrystalPrefab, rareCrystalPrefab, pickupEffectPrefab,
             waterCrystalPrefab, lifeCrystalPrefab, decayCrystalPrefab, waterSpiritPrefab, lifeSpiritPrefab,
             decaySpiritPrefab;
@@ -38,6 +39,7 @@ namespace Game
         private int fireCount= 0, waterCount = 0, lifeCount= 0, decayCount = 0;
         public void SpawnCrystal(byte crystalId, byte crystalKey, int x, int y)
         {
+            if(!GameLogic.Instance.gameStarted) return;
             switch (crystalId)
             {
                 case 0: //nothing
@@ -46,90 +48,108 @@ namespace Game
                     GameObject go = Instantiate(fireCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = go;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 2://water crystal
                     GameObject wc = Instantiate(waterCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = wc;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 3://water crystal
                     GameObject lc = Instantiate(lifeCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = lc;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 4://water crystal
                     GameObject dc = Instantiate(decayCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = dc;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 5:
                     GameObject burn3crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = burn3crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 6:
                     GameObject drown3crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = drown3crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 7:
                     GameObject breath3crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = breath3crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 8:
                     GameObject decay3crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = decay3crystal;
+                    UpdateLayerCrystal(decay3crystal);
                     break;
                 case 26:
                     GameObject burn5crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = burn5crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 27:
                     GameObject drown5crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = drown5crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 28:
                     GameObject breath5crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = breath5crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 29:
                     GameObject decay5crystal = Instantiate(commonCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = decay5crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 51:
                     GameObject burn10crystal = Instantiate(rareCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = burn10crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 52:
                     GameObject drown10crystal = Instantiate(rareCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = drown10crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 53:
                     GameObject breath10crystal = Instantiate(rareCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = breath10crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 54:
                     GameObject decay10crystal = Instantiate(rareCrystalPrefab, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = decay10crystal;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 case 101:
                     GameObject dirt_tile = Instantiate(PlantController.Instance.dirt, new Vector3((float)x, (float)y, 0),
                         Quaternion.identity);
                     GameLogic.Instance.CrystalMap[crystalKey] = dirt_tile;
+                    UpdateLayerCrystal(GameLogic.Instance.CrystalMap[crystalKey]);
                     break;
                 default:
                     break;
             }
+            
         }
 
         private void PlayCrystalPickupEffect(int x, int y)
@@ -154,7 +174,7 @@ namespace Game
                 Destroy(obj);
             }
         }
-        public void PickupCrystal(int animalId, byte crystalId, byte crystalKey, int x, int y, int addedHealth, bool spawnDirt)
+        public void PickupCrystal(int animalId, byte crystalId, byte crystalKey, int x, int y, int addedHealth, bool spawnDirt, int tX, int tY)
         {
             
             GameObject animal = GetAnimalNoSwitch(animalId);
@@ -171,12 +191,11 @@ namespace Game
                         DestroyChildrenParticles(animal);
                     }
 
-                    if (GameLogic.Instance.GameAnimals[animalId].FireCount < 3)
-                    {
+                    
                         GameObject fireSpirit = Instantiate(fireSpiritPrefab, animal.transform.position, Quaternion.identity);
                         fireSpirit.GetComponent<CircularMotion>().centerPoint = animal;
                         GameLogic.Instance.GameAnimals[animalId].FireCount +=1;
-                    }
+                    
                     
                     GameLogic.Instance.GameAnimals[animalId].WaterCount = 0;
                     GameLogic.Instance.GameAnimals[animalId].LifeCount = 0;
@@ -191,12 +210,11 @@ namespace Game
                         DestroyChildrenParticles(animal);
                     }
 
-                    if (GameLogic.Instance.GameAnimals[animalId].WaterCount < 3)
-                    {
+                    
                         GameObject waterSpirit = Instantiate(waterSpiritPrefab, animal.transform.position, Quaternion.identity);
                         waterSpirit.GetComponent<CircularMotion>().centerPoint = animal;
                         GameLogic.Instance.GameAnimals[animalId].WaterCount +=1;
-                    }
+                    
 
                    
                     GameLogic.Instance.GameAnimals[animalId].FireCount = 0;
@@ -213,12 +231,11 @@ namespace Game
                         DestroyChildrenParticles(animal);
                     }
 
-                    if (GameLogic.Instance.GameAnimals[animalId].LifeCount < 3)
-                    {
+                   
                         GameObject lifeSpirit = Instantiate(lifeSpiritPrefab, animal.transform.position, Quaternion.identity);
                         lifeSpirit.GetComponent<CircularMotion>().centerPoint = animal;
                         GameLogic.Instance.GameAnimals[animalId].LifeCount +=1;
-                    }
+                    
 
                     
                     GameLogic.Instance.GameAnimals[animalId].FireCount = 0;
@@ -234,12 +251,11 @@ namespace Game
                         DestroyChildrenParticles(animal);
                     }
 
-                    if (GameLogic.Instance.GameAnimals[animalId].DecayCount < 3)
-                    {
+                    
                         GameObject decaySpirit = Instantiate(decaySpiritPrefab, animal.transform.position, Quaternion.identity);
                         decaySpirit.GetComponent<CircularMotion>().centerPoint = animal;
                         GameLogic.Instance.GameAnimals[animalId].DecayCount +=1;
-                    }
+                    
                   
                     GameLogic.Instance.GameAnimals[animalId].FireCount = 0;
                     GameLogic.Instance.GameAnimals[animalId].WaterCount = 0;
@@ -297,15 +313,60 @@ namespace Game
                     PlayCrystalPickupEffect(x, y);
                     break;
                 case 100:
+                    AnimalEffectController.Instance.eggs.Remove(GameLogic.Instance.CrystalMap[crystalKey]);
                     Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
                     PlayCrystalPickupEffect(x, y);
                    //StartCoroutine(AttacksController.Instance.SpawnHealthText((int)animalPos.x, (int)animalPos.y, addedHealth, Color.green));
                     break;
                 case ConstantVars.egg_on_dirt_tile:
+                    AnimalEffectController.Instance.eggs.Remove(GameLogic.Instance.CrystalMap[crystalKey]);
                     Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
                     PlayCrystalPickupEffect(x, y);
                     //StartCoroutine(AttacksController.Instance.SpawnHealthText((int)animalPos.x, (int)animalPos.y, addedHealth, Color.green));
                     break;
+                case ConstantVars.clamshell:
+                    Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
+                    AnimalEffectController.Instance.shellList.Remove(GameLogic.Instance.CrystalMap[crystalKey]);
+                    PlayCrystalPickupEffect(x, y);
+                    //StartCoroutine(AttacksController.Instance.SpawnHealthText((int)animalPos.x, (int)animalPos.y, addedHealth, Color.green));
+                    break;
+                case ConstantVars.clamshell_on_dirt:
+                    Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
+                    AnimalEffectController.Instance.shellList.Remove(GameLogic.Instance.CrystalMap[crystalKey]);
+                    PlayCrystalPickupEffect(x, y);
+                    //StartCoroutine(AttacksController.Instance.SpawnHealthText((int)animalPos.x, (int)animalPos.y, addedHealth, Color.green));
+                    break;
+                case ConstantVars.bunnyegg:
+                    Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
+                    AnimalEffectController.Instance.bunnyEggs.Remove(GameLogic.Instance.CrystalMap[crystalKey]);
+                    PlayCrystalPickupEffect(x, y);
+                    //StartCoroutine(AttacksController.Instance.SpawnHealthText((int)animalPos.x, (int)animalPos.y, addedHealth, Color.green));
+                    break;
+                case ConstantVars.bunnyegg_on_dirt:
+                    Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
+                    AnimalEffectController.Instance.bunnyEggs.Remove(GameLogic.Instance.CrystalMap[crystalKey]);
+                    PlayCrystalPickupEffect(x, y);
+                    //StartCoroutine(AttacksController.Instance.SpawnHealthText((int)animalPos.x, (int)animalPos.y, addedHealth, Color.green));
+                    break;
+                case ConstantVars.dogbone:
+                    Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
+                    GameLogic.Instance.CrystalMap.Remove(crystalKey);
+                    PlayCrystalPickupEffect(x, y);
+                    break;
+                case ConstantVars.dogbone_on_dirt:
+                    Destroy(GameLogic.Instance.CrystalMap[crystalKey]);
+                    GameLogic.Instance.CrystalMap.Remove(crystalKey);
+                    PlayCrystalPickupEffect(x, y);
+                    break;
+                case ConstantVars.teddy_bear:
+                    PlayCrystalPickupEffect(x, y);
+                    StartCoroutine(AnimalEffectController.Instance.PickupTeddy(animal, animalId, tX, tY));
+                    break;
+                case ConstantVars.teddy_bear_on_dirt:
+                    PlayCrystalPickupEffect(x, y);
+                    StartCoroutine(AnimalEffectController.Instance.PickupTeddy(animal, animalId, tX, tY));
+                    break;
+
                 
                 default:
                     break;
@@ -324,23 +385,27 @@ namespace Game
 
         public GameObject GetAnimalNoSwitch(int animalId)
         {
-            switch (animalId)
-            {
-                case 0:
-                    return GameLogic.Instance.myAnimal0;
-                case 1:
-                    return GameLogic.Instance.myAnimal1;
-                case 2:
-                    return GameLogic.Instance.myAnimal2;
-                case 3:
-                    return GameLogic.Instance.enemyAnimal0;
-                case 4:
-                    return GameLogic.Instance.enemyAnimal1;
-                case 5:
-                    return GameLogic.Instance.enemyAnimal2;
-            }
+            if(animalId < GameLogic.Instance.numberOfAnimals/2) return GameLogic.Instance.myAnimals[animalId];
+            return GameLogic.Instance.enemyAnimals[animalId - GameLogic.Instance.numberOfAnimals/2];
+        }
 
-            return null;
+        public void UpdateLayerAnimal(GameObject go)
+        {
+            go.transform.GetChild(1).GetComponent<SpriteRenderer>().sortingOrder = 
+                -Mathf.RoundToInt(go.transform.position.y);
+        }
+        public void UpdateLayerAnimalSpecific(GameObject go,int order)
+        {
+            go.transform.GetChild(1).GetComponent<SpriteRenderer>().sortingOrder =
+                order;
+        }
+        
+        public void UpdateLayerCrystal(GameObject go)
+        {
+            SpriteRenderer sr = go.transform.GetChild(0).GetComponent<SpriteRenderer>();
+            sr.sortingOrder = 
+                -Mathf.RoundToInt(go.transform.position.y);
+            sr.sortingLayerName = "Animals";
         }
     }
 }

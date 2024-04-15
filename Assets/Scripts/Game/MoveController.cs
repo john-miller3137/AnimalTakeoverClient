@@ -3,6 +3,8 @@ using Game;
 using Network;
 using Scripts.GameStructure;
 using SharedLibrary;
+using SharedLibrary.Library;
+using SharedLibrary.Objects;
 using UnityEngine;
 
 public class MoveController : MonoBehaviour
@@ -43,28 +45,48 @@ public class MoveController : MonoBehaviour
         int oldCrystalKey = eventParams.oldCrystalKey;
         bool spawnDirt = eventParams.spawnDirt;
         ItemId itemId = eventParams.itemId;
+        int addedXp = eventParams.addedXp;
+        float xpRatio = eventParams.xpRatio;
+        bool addedMove = eventParams.addedMove;
+        int tX = eventParams.tX;
+        int tY = eventParams.tY;
+        int playerNum = eventParams.playerNum;
         if (GameLogic.Instance.IsPlayerOne)
         {
-            if (animalId < 3)
+            if (playerNum == GameLogic.Instance.playerNum)
             {
                 InventoryController.Instance.AddItemToInventoryVoid((int)itemId, x+Constants.hor_offset, y+Constants.vert_offset);
             }
             yield return MoveAnimal(animalId, x+Constants.hor_offset, y + Constants.vert_offset);
-            CrystalController.Instance.PickupCrystal(animalId, crystalId, crystalKey, x, y, addedHealth, spawnDirt);
-            AnimalEffectController.Instance.DoEffect(effectId, oldX + Constants.hor_offset, oldY + Constants.vert_offset, oldCrystalKey,
+            CrystalController.Instance.PickupCrystal(animalId, crystalId, crystalKey, x, y, addedHealth, spawnDirt, tX, tY);
+            AnimalEffectController.Instance.DoEffect(effectId, oldX + Constants.hor_offset, 
+                oldY + Constants.vert_offset, oldCrystalKey,
                 x, y, addedHealth);
+            StartCoroutine(AttacksController.Instance.updateXp(x + Constants.hor_offset, y + Constants.vert_offset, addedXp, Color.blue, animalId, xpRatio));
+            if (addedMove)
+            {
+                StartCoroutine(AttacksController.Instance.SpawnAddedMove(x + Constants.hor_offset,
+                    y + Constants.vert_offset, AnimalEffectController.Instance.PickRandomEggColor()));
+            }
         }
         else
         {
-            if (animalId >= 3 && animalId <= 5)
+            if (playerNum == GameLogic.Instance.playerNum)
             {
                 InventoryController.Instance.AddItemToInventoryVoid((int)itemId, GameLogic.flipX(x)+Constants.hor_offset, GameLogic.flipY(y)+Constants.vert_offset);
             }
             yield return MoveAnimal(animalId, GameLogic.flipX(x)+Constants.hor_offset, GameLogic.flipY(y)+Constants.vert_offset);
             CrystalController.Instance.PickupCrystal(MessageHandlers.SwitchAnimal(animalId), crystalId, crystalKey,
-                GameLogic.flipX(x), GameLogic.flipY(y), addedHealth, spawnDirt);
+                GameLogic.flipX(x), GameLogic.flipY(y), addedHealth, spawnDirt, GameLogic.flipX(tX), GameLogic.flipY(tY));
             AnimalEffectController.Instance.DoEffect(effectId, GameLogic.flipX(oldX) + Constants.hor_offset, 
                 GameLogic.flipY(oldY) + Constants.vert_offset, oldCrystalKey, GameLogic.flipX(x), GameLogic.flipY(y), addedHealth);
+            StartCoroutine(AttacksController.Instance.updateXp(GameLogic.flipX(x) + Constants.hor_offset, GameLogic.flipY(y) + Constants.vert_offset, 
+                addedXp, Color.blue, animalId, xpRatio));
+            if (addedMove)
+            {
+                StartCoroutine(AttacksController.Instance.SpawnAddedMove(GameLogic.flipX(x) + Constants.hor_offset,
+                    GameLogic.flipY(y) + Constants.vert_offset, AnimalEffectController.Instance.PickRandomEggColor()));
+            }
         }
         
         yield return null;
@@ -74,8 +96,9 @@ public class MoveController : MonoBehaviour
         GameObject animal = GetAnimal(animalId);
         animal.transform.position = new Vector3(xMove, yMove, 0);
         GameController.Instance.PlayMoveSound();
+        CrystalController.Instance.UpdateLayerAnimal(animal);
         CheckForModifiers();
-        Debug.Log("animal "+ animalId + " moved!");
+        //Debug.Log("animal "+ animalId + " moved!");
         yield return null;
     }
 
@@ -89,68 +112,60 @@ public class MoveController : MonoBehaviour
     {
         lock (PlantController.Instance.dirtLock)
         {
-            for (int i = 0; i < PlantController.Instance.dirtTiles.Count; i++)
+            foreach (GameObject dirtTile in PlantController.Instance.dirtTiles.Values)
             {
-                GameObject dirtTile = PlantController.Instance.dirtTiles[i];
                 Vector3 dirtTilePos = dirtTile.transform.position;
-                Vector3 animal0Pos = GameLogic.Instance.myAnimal0.transform.position;
-                Vector3 animal1Pos = GameLogic.Instance.myAnimal1.transform.position;
-                Vector3 animal2Pos = GameLogic.Instance.myAnimal2.transform.position;
-                Vector3 animal3Pos = GameLogic.Instance.enemyAnimal0.transform.position;
-                Vector3 animal4Pos = GameLogic.Instance.enemyAnimal1.transform.position;
-                Vector3 animal5Pos = GameLogic.Instance.enemyAnimal2.transform.position;
-                
-                if(((Mathf.RoundToInt(dirtTilePos.x) != Mathf.RoundToInt(animal0Pos.x)) || 
-                    (Mathf.RoundToInt(dirtTilePos.y) != Mathf.RoundToInt(animal0Pos.y))) &&
-                    ((Mathf.RoundToInt(dirtTilePos.x) != Mathf.RoundToInt(animal1Pos.x)) ||
-                      (Mathf.RoundToInt(dirtTilePos.y) != Mathf.RoundToInt(animal1Pos.y))) && 
-                    ((Mathf.RoundToInt(dirtTilePos.x) != Mathf.RoundToInt(animal2Pos.x)) ||
-                     (Mathf.RoundToInt(dirtTilePos.y) != Mathf.RoundToInt(animal2Pos.y))) && 
-                    ((Mathf.RoundToInt(dirtTilePos.x) != Mathf.RoundToInt(animal3Pos.x)) ||
-                     (Mathf.RoundToInt(dirtTilePos.y) != Mathf.RoundToInt(animal3Pos.y))) && 
-                    ((Mathf.RoundToInt(dirtTilePos.x) != Mathf.RoundToInt(animal4Pos.x)) || 
-                     (Mathf.RoundToInt(dirtTilePos.y) != Mathf.RoundToInt(animal4Pos.y))) &&
-                    ((Mathf.RoundToInt(dirtTilePos.x) != Mathf.RoundToInt(animal5Pos.x)) ||
-                     (Mathf.RoundToInt(dirtTilePos.y) != Mathf.RoundToInt(animal5Pos.y))))
+                bool isAtAnimalLocation = false;
+
+                // Check myAnimals
+                foreach (var animal in GameLogic.Instance.myAnimals)
                 {
-                    dirtTile.transform.GetChild(0).GetComponent<BoxCollider2D>().enabled = true;
+                    Vector3 animalPos = animal.transform.position;
+                    if (Mathf.RoundToInt(dirtTilePos.x) == Mathf.RoundToInt(animalPos.x) &&
+                        Mathf.RoundToInt(dirtTilePos.y) == Mathf.RoundToInt(animalPos.y))
+                    {
+                        isAtAnimalLocation = true;
+                        break;
+                    }
                 }
-                else
+
+                // Check enemyAnimals if not found in myAnimals
+                if (!isAtAnimalLocation)
                 {
-                    dirtTile.transform.GetChild(0).GetComponent<BoxCollider2D>().enabled = false;
+                    foreach (var animal in GameLogic.Instance.enemyAnimals)
+                    {
+                        Vector3 animalPos = animal.transform.position;
+                        if (Mathf.RoundToInt(dirtTilePos.x) == Mathf.RoundToInt(animalPos.x) &&
+                            Mathf.RoundToInt(dirtTilePos.y) == Mathf.RoundToInt(animalPos.y))
+                        {
+                            isAtAnimalLocation = true;
+                            break;
+                        }
+                    }
                 }
+
+                // Enable or disable the BoxCollider2D based on whether the dirtTile is at an animal location
+                dirtTile.transform.GetChild(0).GetComponent<BoxCollider2D>().enabled = !isAtAnimalLocation;
             }
         }
-        
     }
 
     private GameObject GetAnimal(int animalId)
     {
         GameObject animal;
-        switch (animalId)
+        int numAnimals = GameLogic.Instance.numberOfAnimals;
+
+        if (animalId == 5 && InputLogic.Instance.isTutorial)
         {
-            case 0:
-                animal = GameLogic.Instance.IsPlayerOne ? a0 : a3;
-                
-                break;
-            case 1:
-                animal = GameLogic.Instance.IsPlayerOne ? a1 : a4;
-                break;
-            case 2:
-                animal = GameLogic.Instance.IsPlayerOne ? a2 : a5;
-                break;
-            case 3:
-                animal = GameLogic.Instance.IsPlayerOne ? a3 : a0;
-                break;
-            case 4:
-                animal = GameLogic.Instance.IsPlayerOne ? a4 : a1;
-                break;
-            case 5:
-                animal = GameLogic.Instance.IsPlayerOne ? a5 : a2;
-                break;
-            default:
-                animal = null;
-                break;
+            animal = GameLogic.Instance.myAnimal2;
+        }
+        else if (GameLogic.Instance.IsPlayerOne)
+        {
+            animal = animalId < numAnimals / 2 ? GameLogic.Instance.myAnimals[animalId] : GameLogic.Instance.enemyAnimals[animalId - numAnimals / 2];
+        }
+        else
+        {
+            animal = animalId < numAnimals / 2 ? GameLogic.Instance.enemyAnimals[animalId] : GameLogic.Instance.myAnimals[animalId - numAnimals / 2];
         }
 
         return animal;

@@ -56,7 +56,7 @@ public class CircularMotion : MonoBehaviour
             */
             foreach(ParticleSystemRenderer psr in pSystems)
             {
-                psr.sortingLayerName = "Animals";
+                psr.sortingLayerName = "PlantEffectsOverlay";
             }
             
         }
@@ -72,7 +72,7 @@ public class CircularMotion : MonoBehaviour
             */
             foreach (ParticleSystemRenderer psr in pSystems)
             {
-                psr.sortingLayerName = "Background";
+                psr.sortingLayerName = "Crystals";
             }
         }
     }

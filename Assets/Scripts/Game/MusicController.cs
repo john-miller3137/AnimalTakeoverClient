@@ -66,10 +66,10 @@ namespace Game
         private void Update()
         {
             bool playing = GameLogic.Instance.isLoaded;
-            if (!radioSource.isPlaying && playing)
+            if (!radioSource.isPlaying && playing && radioSource.isActiveAndEnabled)
             {
                 finishedCount++;
-                if (finishedCount > 1)
+                if (finishedCount > 0)
                 {
                     NextSong();
                 }

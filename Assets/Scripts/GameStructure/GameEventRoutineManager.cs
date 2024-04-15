@@ -48,12 +48,27 @@ namespace Scripts.GameStructure
 
         private void Update()
         {
-            ProcessRoutinesQueue(attackQueue);
-            ProcessRoutinesQueue(effectsQueue);
-            ProcessRoutinesQueue(movementQueue);
+            if(GameLogic.Instance.gameStarted) StartCoroutine(ProcessRoutinesCoroutine());
         }
 
-        private void ProcessRoutinesQueue(Queue<Tuple<int, GameEventRoutine>> queue)
+        public void ClearQueues()
+        {
+            attackQueue.Clear();
+            movementQueue.Clear();
+            effectsQueue.Clear();
+            lock (schedulerlock)
+            {
+                _routinesScheduled.Clear();
+            }
+        }
+
+        private IEnumerator ProcessRoutinesCoroutine()
+        {
+            yield return ProcessRoutinesQueue(attackQueue);
+            yield return ProcessRoutinesQueue(movementQueue);
+            yield return ProcessRoutinesQueue(effectsQueue);
+        }
+        private IEnumerator ProcessRoutinesQueue(Queue<Tuple<int, GameEventRoutine>> queue)
         {
             lock (lockObject)
             {
@@ -66,14 +81,18 @@ namespace Scripts.GameStructure
                     
 
                     StartCoroutine(ExecuteRoutine(key, routine, queue));
+                    yield return null;
                 }
             }
+
+            yield return null;
         }
 
         public void AddRoutine(GameEventRoutine routine)
         {
             lock (lockObject)
             {
+                Debug.Log("adding routine " + routine.animalId + " " + routine.targetId + " " + routine.gameEvent + " to queue");
                 Interlocked.Increment(ref threadSafeCounter);
                 int key = threadSafeCounter;
 
@@ -94,21 +113,24 @@ namespace Scripts.GameStructure
 
         private IEnumerator ExecuteRoutine(int key, GameEventRoutine routine, Queue<Tuple<int, GameEventRoutine>> queue)
         {
-            Debug.Log($"routine waiting for conflict (executing...) - animalId: {routine.animalId} targetId: {routine.targetId}" +
-                      $"event: {routine.gameEvent}");
+            //Debug.Log($"routine waiting for conflict (executing...) - animalId: {routine.animalId} targetId: {routine.targetId}" +
+              //        $"event: {routine.gameEvent}");
             // Wait until there are no more conflicting routines
             yield return WaitForConflicts(routine);
 
+            yield return new WaitForEndOfFrame();
+            
             lock (schedulerlock)
             {
                 _routinesScheduled.Add(routine);
             }
 
-            Debug.Log($"routine not conflict (executing...) - animalId: {routine.animalId} targetId: {routine.targetId}" +
-                      $"event: {routine.gameEvent}");
+            //Debug.Log($"routine not conflict (executing...) - animalId: {routine.animalId} targetId: {routine.targetId}" +
+              //        $"event: {routine.gameEvent}");
             // Execute the routine
-            yield return new WaitForEndOfFrame();
+           
             
+            Debug.Log("executing routine " + routine.animalId + " " + routine.targetId + " " + routine.gameEvent + " to queue");
             yield return routine.Execute();
             
             yield return new WaitForEndOfFrame();
@@ -127,8 +149,7 @@ namespace Scripts.GameStructure
         {
             lock (schedulerlock)
             {
-                Debug.Log("scheduler lock locked");
-
+                //Debug.Log("scheduler lock locked");
                 bool hasConflicts;
 
                 if (routine.targetId == -1)
@@ -147,7 +168,7 @@ namespace Scripts.GameStructure
 
                 while (hasConflicts)
                 {
-                    Debug.Log($"{hasConflicts} hasConflicts");
+                    //Debug.Log($"{hasConflicts} hasConflicts");
                     yield return new WaitForEndOfFrame(); // Wait until the end of the frame
 
                     if (routine.targetId == -1)
@@ -163,6 +184,7 @@ namespace Scripts.GameStructure
                             (r.animalId == routine.animalId || r.targetId == routine.targetId || 
                              r.animalId == routine.targetId || r.targetId == routine.animalId) && r != routine);
                     }
+                    
                 }
             }
 
@@ -171,7 +193,7 @@ namespace Scripts.GameStructure
         public bool IsConflict(int animalId)
         {
             
-            Debug.Log($"{animalId} is THE routines animalId");
+            //Debug.Log($"{animalId} is THE routines animalId");
             lock (lockObject)
             {
                 foreach (var existingRoutine in attackQueue)

@@ -1,14 +1,18 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 using Game;
 using Network;
 using Riptide;
 using Scripts.GameStructure;
+using Server.Game;
 using SharedLibrary;
 using SharedLibrary.Library;
 using SharedLibrary.Objects;
+using SharedLibrary.ReturnCodes;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -33,57 +37,55 @@ public class GameLogic : MonoBehaviour
             return instance;
         }
     }
-    void Awake()
-    {
-        if (instance != null && instance != this)
-        {
-            Destroy(this.gameObject);
-        }
-        else
-        {
-            instance = this;
-        }
-    }
 
-    [SerializeField] private GameObject gameObjects, greyedOut, possibleTilePrefab,
-        leftArrow, rightArrow, healthHead1, healthHead2, healthHead3, camera;//, trash;
+    [SerializeField] private GameObject greyedOut, possibleTilePrefab,
+        leftArrow, rightArrow, healthHead1, healthHead2, healthHead3,
+        guiCover,
+        specialReadyFx;//, trash;
     //public GameObject card0, card1, card2, card3, zoomCard, bcard0, bcard1, bcard2, bcard3;
     //public GameCard gc0, gc1, gc2, gc3;
     //private int selectedCard = -1;
-    public GameObject myAnimal0, myAnimal1, myAnimal2, enemyAnimal0, enemyAnimal1, enemyAnimal2;
-    public Vector3[] animalInfo = new Vector3[max_animals];
-    private GameObject[] myAnimals, enemyAnimals;
-    private static List<GameObject> possibleMoveTiles;
+    public GameObject myAnimal0, myAnimal1, myAnimal2, enemyAnimal0, enemyAnimal1, enemyAnimal2, gameObjects,
+        button, outerCircle,camera, myAnimal3, enemyAnimal3;
+    public Vector3[] animalInfo;
+    public GameObject[] myAnimals, enemyAnimals;
+    private static List<GameObject> possibleMoveTiles, greySpaces;
     private bool isPlayerOne;
-    private const int max_animals = 6;
-    private const int user_animals_count = 3;
+    private int user_animals_count;
     private const int max_x = 8;
     private const int max_y = 16;
     private const int vert_offset = -6;
     private const int hor_offset = -4;
     private const int max_cards = 4;
+    public int numberOfAnimals, playerNum, numberOfPlayers;
     private bool possibleMoveTilesInitalized;
-    private BoxCollider2D bc0, bc1, bc2, bc3, bc4, bc5, leftArrowBC, rightArrowBC, hh1BC, hh2BC, hh3BC;//, cbc0,cbc1,cbc2,cbc3, trashbc;
-    private BoxCollider2D buttonCollider, radioCollider;
-    private SpriteRenderer csr0, csr1, csr2, csr3, asr0, asr1, asr2, asr3, asr4, asr5;
+    private BoxCollider2D bc0, bc1, bc3, bc4, bc5, bc6, bc7, leftArrowBC, rightArrowBC, hh1BC, hh2BC, hh3BC;//, cbc0,cbc1,cbc2,cbc3, trashbc;
+    public BoxCollider2D buttonCollider, radioCollider;
+    private SpriteRenderer csr0, csr1, csr2, csr3, asr0, asr1, asr2, asr3, asr4, asr5, asr6, asr7;
+    public BoxCollider2D bc2;
     [SerializeField] private Sprite redTurnSprite, greenTurnSprite;
-    [SerializeField] private GameObject turnIndicator, innerCircle, outerCircle, leftArrowSprite, rightArrowSprite, button,
-        radio;
+    [SerializeField] private GameObject turnIndicator, innerCircle, leftArrowSprite, rightArrowSprite,
+        radio, greyBox, boardResetFx;
     private GameCardInfo gci0, gci1, gci2, gci3;
     //private Transform selectedCardPos;
-    public int selectedAnimal = -1, selectedTargetAnimal = -1;
+    public int selectedAnimal, selectedTargetAnimal;
     private const float circleSizeThreshold = .25f;
     private GameObject selectedAnimalObj;
     public bool isLoaded = false;
-    private CameraShake _shake;
+    public CameraShake _shake;
     public List<int> myDeadAnimals, enemyDeadAnimals;
-    private bool isMyTurn, leftArrowTouched, rightArrowTouched, invSelectActive;
+    private bool  leftArrowTouched, rightArrowTouched, invSelectActive;
+    public bool isMyTurn;
     private GameObject inventory_select, selected_item;
     private int selected_id;
+    public bool gameStarted;
+    public GameMode currentGameMode;
+    private SpriteRenderer[] animalRenderers;
 
     public Dictionary<byte, GameObject> CrystalMap;
     
     public GameAnimal[] GameAnimals;
+    private Camera cameraCam;
     private SpriteRenderer leftArrowSpriteRenderer, rightArrowSpriteRenderer;
 
     public GameObject[] AnimalList;
@@ -98,9 +100,61 @@ public class GameLogic : MonoBehaviour
         set { isPlayerOne = value; }
     }
 
-    // Start is called before the first frame update
-    void Start()
+    private void InitializeObjects()
     {
+        myAnimals = new GameObject[numberOfAnimals/2];
+        enemyAnimals = new GameObject[numberOfAnimals/2];
+        animalRenderers = new SpriteRenderer[numberOfAnimals];
+        GameAnimals = new GameAnimal[numberOfAnimals];
+        if (currentGameMode == GameMode.DEFAULT)
+        {
+            enemyAnimals[0] = enemyAnimal0;
+            enemyAnimals[1] = enemyAnimal1;
+            enemyAnimals[2] = enemyAnimal2;
+            myAnimals[0] = myAnimal0;
+            myAnimals[1] = myAnimal1;
+            myAnimals[2] = myAnimal2;
+            animalRenderers[0] = asr0;
+            animalRenderers[1] = asr1;
+            animalRenderers[2] = asr2;
+            animalRenderers[3] = asr3;
+            animalRenderers[4] = asr4;
+            animalRenderers[5] = asr5;
+            myAnimal3.SetActive(false);
+            enemyAnimal3.SetActive(false);
+        }
+        else
+        {
+            enemyAnimals[0] = enemyAnimal0;
+            enemyAnimals[1] = enemyAnimal1;
+            enemyAnimals[2] = enemyAnimal2;
+            enemyAnimals[3] = enemyAnimal3;
+            myAnimals[0] = myAnimal0;
+            myAnimals[1] = myAnimal1;
+            myAnimals[2] = myAnimal2;
+            myAnimals[3] = myAnimal3;
+            animalRenderers[0] = asr0;
+            animalRenderers[1] = asr1;
+            animalRenderers[2] = asr2;
+            animalRenderers[3] = asr6;
+            animalRenderers[4] = asr3;
+            animalRenderers[5] = asr4;
+            animalRenderers[6] = asr5;
+            animalRenderers[7] = asr7;
+            myAnimal3.SetActive(true);
+            enemyAnimal3.SetActive(true);
+        }
+        
+    }
+    
+    // Start is called before the first frame update
+    async void Start()
+    {
+        selectedAnimal = -1;
+        selectedTargetAnimal = -1;
+        cameraCam = camera.GetComponent<Camera>();
+        gameStarted = false;
+        greySpaces = new List<GameObject>();
         radioCollider = radio.GetComponent<BoxCollider2D>();
         myDeadAnimals = new List<int>();
         enemyDeadAnimals = new List<int>();
@@ -113,76 +167,77 @@ public class GameLogic : MonoBehaviour
         buttonCollider = button.GetComponent<BoxCollider2D>();
         leftArrowSpriteRenderer = leftArrowSprite.GetComponent<SpriteRenderer>();
         rightArrowSpriteRenderer = rightArrowSprite.GetComponent<SpriteRenderer>();
-        GameAnimals = new GameAnimal[6];
+        
         possibleMoveTiles = new List<GameObject>();
-        myAnimals = new GameObject[user_animals_count];
-        enemyAnimals = new GameObject[user_animals_count];
-        animalMoved = new bool[user_animals_count];
-        AnimalList = new GameObject[max_animals];
         CrystalMap = new Dictionary<byte, GameObject>();
-        Debug.Log("GameLogic Start");
-        //trashbc = trash.GetComponent<BoxCollider2D>();
+        
         bc0 = myAnimal0.GetComponent<BoxCollider2D>();
         bc1 = myAnimal1.GetComponent<BoxCollider2D>();
         bc2 = myAnimal2.GetComponent<BoxCollider2D>();
         bc3 = enemyAnimal0.GetComponent<BoxCollider2D>();
         bc4 = enemyAnimal1.GetComponent<BoxCollider2D>();
         bc5 = enemyAnimal2.GetComponent<BoxCollider2D>();
-        /*cbc0 = card0.GetComponent<BoxCollider2D>();
-        cbc1 = card1.GetComponent<BoxCollider2D>();
-        cbc2 = card2.GetComponent<BoxCollider2D>();
-        cbc3 = card3.GetComponent<BoxCollider2D>();
-        csr0 = card0.GetComponent<SpriteRenderer>();
-        csr1 = card1.GetComponent<SpriteRenderer>();
-        csr2 = card2.GetComponent<SpriteRenderer>();
-        csr3 = card3.GetComponent<SpriteRenderer>();*/
+        bc6 = myAnimal3.GetComponent<BoxCollider2D>();
+        bc7 = enemyAnimal3.GetComponent<BoxCollider2D>();
+        
         asr0 = myAnimal0.transform.GetChild(1).GetComponent<SpriteRenderer>();
         asr1 = myAnimal1.transform.GetChild(1).GetComponent<SpriteRenderer>();
         asr2 = myAnimal2.transform.GetChild(1).GetComponent<SpriteRenderer>();
         asr3 = enemyAnimal0.transform.GetChild(1).GetComponent<SpriteRenderer>();
         asr4 = enemyAnimal1.transform.GetChild(1).GetComponent<SpriteRenderer>();
         asr5 = enemyAnimal2.transform.GetChild(1).GetComponent<SpriteRenderer>();
-        /*gci0 = card0.GetComponent<GameCardInfo>();
-        gci1 = card1.GetComponent<GameCardInfo>();
-        gci2 = card2.GetComponent<GameCardInfo>();
-        gci3 = card3.GetComponent<GameCardInfo>();*/
-        enemyAnimals[0] = enemyAnimal0;
-        enemyAnimals[1] = enemyAnimal1;
-        enemyAnimals[2] = enemyAnimal2;
-        myAnimals[0] = myAnimal0;
-        myAnimals[1] = myAnimal1;
-        myAnimals[2] = myAnimal2;
-        //arrows.SetActive(false);
+        asr6 = myAnimal3.transform.GetChild(1).GetComponent<SpriteRenderer>();
+        asr7 = enemyAnimal3.transform.GetChild(1).GetComponent<SpriteRenderer>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        
-        if (Input.touchCount > 0)
+        bool isClick = false;
+        Touch simulatedTouch = default;
+        if (Input.GetMouseButtonDown(0))
         {
-            Touch touch = Input.GetTouch(0);
-            Vector2 tp = Camera.main.ScreenToWorldPoint(touch.position);
+            // Convert mouse position to touch position
+            Vector2 touchPos = cameraCam.ScreenToWorldPoint(Input.mousePosition);
+
+            simulatedTouch = new Touch
+            {
+                fingerId = 0, 
+                position = Input.mousePosition,
+                phase = TouchPhase.Began
+            };
+            isClick = true;
+        } else if (Input.GetMouseButtonUp(0))
+        {
+            Vector2 touchPos = cameraCam.ScreenToWorldPoint(Input.mousePosition);
+            
+            simulatedTouch = new Touch
+            {
+                fingerId = 0,
+                position = Input.mousePosition,
+                phase = TouchPhase.Ended 
+            };
+            isClick = true;
+        }
+        if (Input.touchCount > 0 || isClick)
+        {
+            Touch touch;
+            if (isClick)
+            {
+                touch = simulatedTouch;
+            }
+            else
+            {
+                touch = Input.GetTouch(0);
+            }
+            Vector2 tp = cameraCam.ScreenToWorldPoint(touch.position);
             if (touch.phase == TouchPhase.Began)
             {
                 Collider2D tc = Physics2D.OverlapPoint(tp);
-                /*if (tc == cbc3)
+                if (InputLogic.Instance.isTutorial && InputLogic.Instance.tutComplete)
                 {
-                    //StartCoroutine(SelectCardProcess(3));
+                    TutorialController.Instance.LaunchGame();
                 }
-                else if (tc == cbc2)
-                {
-                    //StartCoroutine(SelectCardProcess(2));
-                }
-                else if (tc == cbc1)
-                {
-                    //StartCoroutine(SelectCardProcess(1));
-                }
-                else if (tc == cbc0)
-                {
-                    //StartCoroutine(SelectCardProcess(0));
-                    
-                }*/
                 if((tc == bc0 || tc == hh1BC) && !myDeadAnimals.Contains(0))
                 {
                     if (selectedAnimal >= 0 )
@@ -210,13 +265,29 @@ public class GameLogic : MonoBehaviour
                     }
                     StartCoroutine(DeselectItem());
                     StartCoroutine(SelectAnimal(2));
+                }else if ((currentGameMode == GameMode.TWOS) ||(currentGameMode == GameMode.TWOS_AI) &&(tc == bc6) && !myDeadAnimals.Contains(3))
+                {
+                    if (selectedAnimal >= 0)
+                    {
+                        StartCoroutine(DeselectAnimal(true));
+                    }
+                    StartCoroutine(DeselectItem());
+                    StartCoroutine(SelectAnimal(3));
+                }else if((currentGameMode == GameMode.TWOS) ||(currentGameMode == GameMode.TWOS_AI) && tc == bc7)
+                {
+                    if (selectedAnimal >= 0)
+                    {
+                        //SendAttackRequest(selectedAnimal, 3);
+                        StartCoroutine(DeselectAnimal(true));
+                    }
+                    StartCoroutine(DeselectItem());
                 }
                 else if(tc == bc3)
                 {
                     if (selectedAnimal >= 0)
                     {
                         //SendAttackRequest(selectedAnimal, 3);
-                        StartCoroutine(DeselectAnimal(false));
+                        StartCoroutine(DeselectAnimal(true));
                     }
                     StartCoroutine(DeselectItem());
                 }
@@ -225,7 +296,7 @@ public class GameLogic : MonoBehaviour
                     if (selectedAnimal >= 0)
                     {
                         
-                        StartCoroutine(DeselectAnimal(false));
+                        StartCoroutine(DeselectAnimal(true));
                     }
                     StartCoroutine(DeselectItem());
                 }
@@ -234,9 +305,20 @@ public class GameLogic : MonoBehaviour
                     if (selectedAnimal >= 0)
                     {
                         //SendAttackRequest(selectedAnimal, 5);
-                        StartCoroutine(DeselectAnimal(false));
+                        StartCoroutine(DeselectAnimal(true));
                     }
                     StartCoroutine(DeselectItem());
+                }
+                else if (tc == TransitionController.Instance.screenCollider && 
+                         !OpenCrateController.Instance.crateOpening)
+                {
+                    StartCoroutine(TransitionController.Instance.CloseCrateOpen());
+                }else if (tc == radioCollider)
+                {
+                    MusicController.Instance.PlayRadio();
+                }else if (tc == EndGameController.Instance.colliderBox)
+                {
+                    EndGameController.Instance.RemoveEndGameScreen();
                 }
                 else if (tc == buttonCollider)
                 {
@@ -244,9 +326,15 @@ public class GameLogic : MonoBehaviour
                     {
                         if (CheckCircleSize() < circleSizeThreshold)
                         {
-                            StartCoroutine(GameController.Instance.SpawnPerfect());
-                            SendAttackRequest(selectedAnimal, selectedTargetAnimal);
-                            StartCoroutine(DeselectAnimal(false));
+                            if (!InputLogic.Instance.isTutorial)
+                            {
+                                SendAttackRequest(selectedAnimal, selectedTargetAnimal);
+                                StartCoroutine(GameLogic.Instance.DeselectAnimal(true));
+                            }
+                            else
+                            {
+                                StartCoroutine(TutorialController.Instance.LaunchFireball());
+                            }
                         }
                         else
                         {
@@ -276,9 +364,12 @@ public class GameLogic : MonoBehaviour
                     rightArrowTouched = true;
                     rightArrowSpriteRenderer.color = Color.grey;
                     StartCoroutine(ShiftTargetRight());
-                } else if (tc == radioCollider)
+                }  else if (tc == EmoteController.Instance.emoteCollider1)
                 {
-                    MusicController.Instance.PlayRadio();
+                    GameMessages.SendEmoteRequest(EmoteCodes.OWL_IMFINE);
+                }else if (tc == EmoteController.Instance.emoteCollider2)
+                {
+                    GameMessages.SendEmoteRequest(EmoteCodes.OWL_SMOKE);
                 }
                 else
                 {
@@ -314,15 +405,22 @@ public class GameLogic : MonoBehaviour
                     {
                         lock (PlantController.Instance.dirtLock)
                         {
-                            for (int i = 0; i < PlantController.Instance.dirtTiles.Count; i++)
+                            foreach (GameObject go in PlantController.Instance.dirtTiles.Values)
                             {
-                                GameObject go = PlantController.Instance.dirtTiles[i];
                                 if (tc == go.transform.GetChild(0).GetComponent<BoxCollider2D>())
                                 {
                                     dirtTouched = true;
                                     if (invSelectActive)
                                     {
-                                        PlantController.Instance.PlantSeed(selected_id, go.transform.position.x, go.transform.position.y);
+                                        if (InputLogic.Instance.isTutorial)
+                                        {
+                                            TutorialController.Instance.PlantSeeds();
+                                        }
+                                        else
+                                        {
+                                            PlantController.Instance.PlantSeed(selected_id, go.transform.position.x, go.transform.position.y);
+                                        }
+                                        
                                         StartCoroutine(DeselectItem());
                                     }
                                 }
@@ -358,114 +456,90 @@ public class GameLogic : MonoBehaviour
 
     private IEnumerator ShiftTargetRight()
     {
-        if (selectedAnimal > -1)
+        if (selectedAnimal < 0)
         {
-            switch (selectedTargetAnimal)
+            selectedTargetAnimal = numberOfAnimals / 2 + FindFirstActiveEnemyAnimal(0);
+            animalRenderers[selectedTargetAnimal].color = Color.white;
+        }
+
+        for (int i = numberOfAnimals / 2; i < numberOfAnimals; i++)
+        {
+            animalRenderers[i].color = Color.grey;
+        }
+
+        int idx = selectedTargetAnimal - numberOfAnimals / 2;
+        bool foundActiveAnimal = false;
+
+        // Start from the next animal and loop to the end of the array
+        for (int i = idx + 1; i < numberOfAnimals / 2; i++)
+        {
+            if (enemyAnimals[i].activeSelf)
             {
-                case 3:
-                    if (enemyAnimal1.activeSelf)
-                    {
-                        selectedTargetAnimal = 4;
-                        asr4.color = Color.white;
-                        asr3.color = Color.grey;
-                        asr5.color = Color.grey;
-                    } else if (enemyAnimal2.activeSelf)
-                    {
-                        selectedTargetAnimal = 5;
-                        asr5.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr3.color = Color.grey;
-                    }
-                    break;
-                case 4:
-                    if (enemyAnimal2.activeSelf)
-                    {
-                        selectedTargetAnimal = 5;
-                        asr5.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr3.color = Color.grey;
-                    } else if (enemyAnimal0.activeSelf)
-                    {
-                        selectedTargetAnimal = 3;
-                        asr3.color = Color.white;
-                        asr5.color = Color.grey;
-                        asr4.color = Color.grey;
-                    }
-                    break;
-                case 5:
-                    if (enemyAnimal0.activeSelf)
-                    {
-                        selectedTargetAnimal = 3;
-                        asr3.color = Color.white;
-                        asr5.color = Color.grey;
-                        asr4.color = Color.grey;
-                    } else if (enemyAnimal1.activeSelf)
-                    {
-                        selectedTargetAnimal = 4;
-                        asr4.color = Color.white;
-                        asr3.color = Color.grey;
-                        asr5.color = Color.grey;
-                    }
-                    break;
+                selectedTargetAnimal = i + numberOfAnimals / 2;
+                animalRenderers[selectedTargetAnimal].color = Color.white;
+                foundActiveAnimal = true;
+                break;
             }
-        } 
+        }
+
+        // If no active animal was found, loop from the start of the array to the current index
+        if (!foundActiveAnimal)
+        {
+            for (int i = 0; i <= idx; i++)
+            {
+                if (enemyAnimals[i].activeSelf)
+                {
+                    selectedTargetAnimal = i + numberOfAnimals / 2;
+                    animalRenderers[selectedTargetAnimal].color = Color.white;
+                    break;
+                }
+            }
+        }
+
         yield return null;
     }
     private IEnumerator ShiftTargetLeft()
     {
-        if (selectedAnimal > -1)
+        if (selectedAnimal < 0)
         {
-            switch (selectedTargetAnimal)
-            {
-                case 3:
-                    if (enemyAnimal2.activeSelf)
-                    {
-                        selectedTargetAnimal = 5;
-                        asr5.color = Color.white;
-                        asr3.color = Color.grey;
-                        asr4.color = Color.grey;
-                    } else if (enemyAnimal1.activeSelf)
-                    {
-                        selectedTargetAnimal = 4;
-                        asr4.color = Color.white;
-                        asr5.color = Color.grey;
-                        asr3.color = Color.grey;
-                    }
-                    break;
-                    
-                case 4:
-                    if (enemyAnimal0.activeSelf)
-                    {
-                        selectedTargetAnimal = 3;
-                        asr3.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.grey;
-                    } else if (enemyAnimal2.activeSelf)
-                    {
-                        selectedTargetAnimal = 5;
-                        asr5.color = Color.white;
-                        asr3.color = Color.grey;
-                        asr4.color = Color.grey;
-                    }
+            selectedTargetAnimal = numberOfAnimals / 2 + FindFirstActiveEnemyAnimal(numberOfAnimals / 2 - 1);
+            animalRenderers[selectedTargetAnimal].color = Color.white;
+        }
 
-                    break;
-                case 5:
-                    if (enemyAnimal1.activeSelf)
-                    {
-                        selectedTargetAnimal = 4;
-                        asr4.color = Color.white;
-                        asr5.color = Color.grey;
-                        asr3.color = Color.grey;
-                    } else if (enemyAnimal0.activeSelf)
-                    {
-                        selectedTargetAnimal = 3;
-                        asr3.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.grey;
-                    }
-                    break;
+        for (int i = numberOfAnimals / 2; i < numberOfAnimals; i++)
+        {
+            animalRenderers[i].color = Color.grey;
+        }
+
+        int idx = selectedTargetAnimal - numberOfAnimals / 2;
+        bool foundActiveAnimal = false;
+
+        // Start from the previous animal and loop to the start of the array
+        for (int i = idx - 1; i >= 0; i--)
+        {
+            if (enemyAnimals[i].activeSelf)
+            {
+                selectedTargetAnimal = i + numberOfAnimals / 2;
+                animalRenderers[selectedTargetAnimal].color = Color.white;
+                foundActiveAnimal = true;
+                break;
             }
         }
+
+        // If no active animal was found, loop from the end of the array to the current index
+        if (!foundActiveAnimal)
+        {
+            for (int i = numberOfAnimals / 2 - 1; i >= idx; i--)
+            {
+                if (enemyAnimals[i].activeSelf)
+                {
+                    selectedTargetAnimal = i + numberOfAnimals / 2;
+                    animalRenderers[selectedTargetAnimal].color = Color.white;
+                    break;
+                }
+            }
+        }
+
         yield return null;
     }
 
@@ -487,21 +561,33 @@ public class GameLogic : MonoBehaviour
 
     public void CallDeselectAnimal()
     {
-        StartCoroutine(DeselectAnimal(false));
+        StartCoroutine(DeselectAnimal(true));
     }
-    private IEnumerator DeselectAnimal(bool saveTarget)
+    public IEnumerator DeselectAnimal(bool saveTarget)
     {
         //arrows.SetActive(false);
+        specialReadyFx.SetActive(false);
         greyedOut.SetActive(false);
-        asr0.color = Color.white;
-        asr1.color = Color.white;
-        asr2.color = Color.white;
+        PlantController.Instance.EnableDirtColliders();
+        guiCover.GetComponent<SpriteRenderer>().sortingLayerName = "Crystals";
+        Color blue = new Color(.5f, .6f, 1, 1);
+        foreach (SpriteRenderer sr in animalRenderers)
+        {
+            if(sr.color != blue) sr.color = Color.white;
+        }
+
+        foreach (var g in enemyAnimals)
+        {
+            CrystalController.Instance.UpdateLayerAnimal(g);
+        }
+        
         if (!saveTarget)
         {
             selectedTargetAnimal = -1;
-            asr3.color = Color.white;
-            asr4.color = Color.white;
-            asr5.color = Color.white;
+            if(asr0.color != blue) asr0.color = Color.white;
+            if(asr1.color != blue) asr1.color = Color.white;
+            if(asr2.color != blue) asr2.color = Color.white;
+            if(asr6.color != blue) asr6.color = Color.white;
         }
 
         selectedAnimal = -1;
@@ -513,8 +599,14 @@ public class GameLogic : MonoBehaviour
             Destroy(go);
         }
 
+        foreach (var go in greySpaces)
+        {
+            Destroy(go);
+        }
+
         StartCoroutine(GameController.Instance.StopAndFadeCircle());
         possibleMoveTiles.RemoveRange(0,possibleMoveTiles.Count);
+       // Debug.Log("sel ani" + selectedTargetAnimal + " bool : " + saveTarget);
         yield return null;
     }
     public void SelectMoveTile(Collider2D c)
@@ -530,123 +622,240 @@ public class GameLogic : MonoBehaviour
                 int moveTileX = Mathf.RoundToInt(go.transform.position.x);
                 int moveTileY = Mathf.RoundToInt(go.transform.position.y);
                 //MoveController.Instance.MoveAnimal(selectedAnimal, );
-                Debug.Log("Move tile selected");
+                //Debug.Log("Move tile selected");
                 
-                Message message = Message.Create(MessageSendMode.Reliable, (ushort)MessageResponseCodes.AnimalMoveRequest);
-                message.AddString(MessageHandlers.Key);
-                message.AddInt(MessageHandlers.RoomId);
-                if (isPlayerOne)
+               
+                if (!InputLogic.Instance.isTutorial)
                 {
-                    message.AddInt(selectedAnimal);
+                    Message message = Message.Create(MessageSendMode.Reliable, (ushort)MessageResponseCodes.AnimalMoveRequest);
+                    message.AddString(MessageHandlers.Key);
+                    message.AddInt(MessageHandlers.RoomId);
+                    if (isPlayerOne)
+                    {
+                        message.AddInt(selectedAnimal);
+                    }
+                    else
+                    {
+                        message.AddInt(selectedAnimal + numberOfAnimals/2);
+                    }
+                    message.AddInt(moveTileX - x);
+                    message.AddInt(moveTileY - y);
+                    //Debug.Log($"move tile at {moveTileX - x} {moveTileY - y}");
+                    NetworkManager.Singleton.MainClient.Send(message);
                 }
                 else
                 {
-                    message.AddInt(selectedAnimal + 3);
+                    if (TutorialController.Instance.moveAwayActive)
+                    {
+                        TutorialController.Instance.moveAwayActive = false;
+                        TutorialController.Instance.moveAwayText.SetActive(false);
+                        TutorialController.Instance.plantSeeds.SetActive(true);
+                    }
+                    TutorialController.Instance.hasMoved = true;
+                    StartCoroutine(MoveController.Instance.MoveAnimal(5, moveTileX, moveTileY));
                 }
-                message.AddInt(moveTileX - x);
-                message.AddInt(moveTileY - y);
-                Debug.Log($"move tile at {moveTileX - x} {moveTileY - y}");
-                NetworkManager.Singleton.MainClient.Send(message);
+                
             }
         }
         
-        StartCoroutine(DeselectAnimal(false));
+        StartCoroutine(DeselectAnimal(true));
+    }
+    
+    private int FindFirstActiveEnemyAnimal(int startIndex)
+    {
+        for (int index = startIndex; index < enemyAnimals.Length; index++)
+        {
+            if (enemyAnimals[index].activeSelf)
+            {
+                return index;
+            }
+        }
+        for (int index = 0; index < startIndex; index++)
+        {
+            if (enemyAnimals[index].activeSelf)
+            {
+                return index;
+            }
+        }
+
+        return -1; // Return -1 if no active animal is found
     }
 
     private IEnumerator DoTargetSelect()
     {
+        Color blue = new Color(.5f, .6f, 1, 1);
         if (selectedTargetAnimal < 0)
         {
             if (enemyAnimal0.activeSelf)
             {
-                asr3.color = Color.white;
-                asr4.color = Color.grey;
-                asr5.color = Color.grey;
-                selectedTargetAnimal = 3;
+                if(asr3.color != blue) asr3.color = Color.white;
+                if(asr4.color != blue)asr4.color = Color.grey;
+                if(asr5.color != blue) asr5.color = Color.grey;
+                if(asr7.color != blue) asr7.color = Color.grey;
+                if (currentGameMode == GameMode.TWOS || currentGameMode == GameMode.TWOS_AI)
+                {
+                    selectedTargetAnimal = 4;
+                }
+                else
+                {
+                    selectedTargetAnimal = 3;
+                }
+                
             } else if (enemyAnimal1.activeSelf)
             {
-                asr3.color = Color.grey;
-                asr4.color = Color.white;
-                asr5.color = Color.grey;
-                selectedTargetAnimal = 4;
+                if(asr3.color != blue)asr3.color = Color.grey;
+                if(asr4.color != blue)asr4.color = Color.white;
+                if(asr5.color != blue)asr5.color = Color.grey;
+                if(asr7.color != blue) asr7.color = Color.grey;
+                if (currentGameMode == GameMode.TWOS|| currentGameMode == GameMode.TWOS_AI)
+                {
+                    selectedTargetAnimal = 5;
+                }
+                else
+                {
+                    selectedTargetAnimal = 4;
+                }
             } else if (enemyAnimal2.activeSelf)
             {
-                asr3.color = Color.grey;
-                asr4.color = Color.grey;
-                asr5.color = Color.white;
-                selectedTargetAnimal = 5;
+                if(asr3.color != blue)asr3.color = Color.grey;
+                if(asr4.color != blue)asr4.color = Color.grey;
+                if(asr5.color != blue)asr5.color = Color.white;
+                if(asr7.color != blue) asr7.color = Color.grey;
+                if (currentGameMode == GameMode.TWOS|| currentGameMode == GameMode.TWOS_AI)
+                {
+                    selectedTargetAnimal = 6;
+                }
+                else
+                {
+                    selectedTargetAnimal = 5;
+                }
+            }else if (enemyAnimal3.activeSelf && (currentGameMode == GameMode.TWOS|| currentGameMode == GameMode.TWOS_AI))
+            {
+                if(asr3.color != blue)asr3.color = Color.grey;
+                if(asr4.color != blue)asr4.color = Color.grey;
+                if(asr5.color != blue)asr5.color = Color.grey;
+                if(asr7.color != blue) asr7.color = Color.white;
+                
+                selectedTargetAnimal = 7;
+
             }
         }
         else
         {
-            switch (selectedTargetAnimal)
+            int idx = FindFirstActiveEnemyAnimal(selectedTargetAnimal-numberOfAnimals/2); // 0 -2/3
+            if (idx > -1)
+            {
+                for (int i = numberOfAnimals / 2; i < numberOfAnimals; i++)
+                {
+                    if (i == idx+ numberOfAnimals / 2)
+                    {
+                        animalRenderers[i].color = Color.white;
+                        selectedTargetAnimal = i;
+                    }
+                    else
+                    {
+                        animalRenderers[i].color = Color.grey; 
+                    }
+                }
+            }
+            /*switch (selectedTargetAnimal)
             {
                 case -1:
                     break;
                 case 3:
                     if (enemyAnimal0.activeSelf)
                     {
-                        asr3.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.grey;
+                        if(asr3.color != blue)asr3.color = Color.white;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 3;
                     } else if (enemyAnimal1.activeSelf)
                     {
-                        asr3.color = Color.grey;
-                        asr4.color = Color.white;
-                        asr5.color = Color.grey;
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.white;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 4;
                     } else if (enemyAnimal2.activeSelf)
                     {
-                        asr3.color = Color.grey;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.white;
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.white;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 5;
+                    }else if (enemyAnimal3.activeSelf)
+                    {
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue) asr7.color = Color.white;
+                        selectedTargetAnimal = 7;
                     }
                     break;
                 case 4:
                     if (enemyAnimal1.activeSelf)
                     {
-                        asr3.color = Color.grey;
-                        asr4.color = Color.white;
-                        asr5.color = Color.grey;
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.white;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 4;
                     } else if (enemyAnimal2.activeSelf)
                     {
-                        asr3.color = Color.grey;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.white;
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.white;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 5;
                     } else  if (enemyAnimal0.activeSelf)
                     {
-                        asr3.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.grey;
+                        if(asr3.color != blue)asr3.color = Color.white;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 3;
-                    } 
+                    } else if (enemyAnimal3.activeSelf)
+                    {
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue) asr7.color = Color.white;
+                        selectedTargetAnimal = 7;
+                    }
                     break;
                 case 5:
                     if (enemyAnimal2.activeSelf)
                     {
-                        asr3.color = Color.grey;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.white;
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.white;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 5;
                     } else  if (enemyAnimal0.activeSelf)
                     {
-                        asr3.color = Color.white;
-                        asr4.color = Color.grey;
-                        asr5.color = Color.grey;
+                        if(asr3.color != blue)asr3.color = Color.white;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 3;
                     } else if (enemyAnimal1.activeSelf)
                     {
-                        asr3.color = Color.grey;
-                        asr4.color = Color.white;
-                        asr5.color = Color.grey;
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.white;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue)asr7.color = Color.grey;
                         selectedTargetAnimal = 4;
-                    } 
+                    } else if (enemyAnimal3.activeSelf)
+                    {
+                        if(asr3.color != blue)asr3.color = Color.grey;
+                        if(asr4.color != blue)asr4.color = Color.grey;
+                        if(asr5.color != blue)asr5.color = Color.grey;
+                        if(asr7.color != blue) asr7.color = Color.white;
+                        selectedTargetAnimal = 7;
+                    }
                     break;
-            }
+            }*/
         }
 
         yield return null;
@@ -654,31 +863,51 @@ public class GameLogic : MonoBehaviour
     private IEnumerator SelectAnimal(int animalId)
     {
         if (isPlayerOne && GameEventRoutineManager.Instance.IsConflict(animalId)) yield break;
-        if (!isPlayerOne && GameEventRoutineManager.Instance.IsConflict(animalId+3)) yield break;
+        if (!isPlayerOne && GameEventRoutineManager.Instance.IsConflict(animalId+numberOfAnimals/2)) yield break;
         greyedOut.SetActive(true);
+        PlantController.Instance.DisableDirtColliders();
+        guiCover.GetComponent<SpriteRenderer>().sortingLayerName = "PlantEffectsOverlay";
         selectedAnimal = animalId;
+        foreach (GameObject g in enemyAnimals)
+        {
+            CrystalController.Instance.UpdateLayerAnimalSpecific(g, 200);
+        }
+        Color blue = new Color(.5f, .6f, 1, 1);
+        if (HealthController.Instance.SpecialReady(animalId))
+        {
+            specialReadyFx.SetActive(true);
+        }
         switch (selectedAnimal)
         {
             case 0:
-                asr1.color = Color.grey;
-                asr2.color = Color.grey;
+                if(asr1.color != blue) asr1.color = Color.grey;
+                if(asr2.color != blue) asr2.color = Color.grey;
+                if(asr6.color != blue) asr6.color = Color.grey;
                 
                 selectedAnimalObj = myAnimal0;
                 
                 StartCoroutine(DoTargetSelect());
                 break;
             case 1:
-                asr0.color = Color.grey;
-                asr2.color = Color.grey;
+                if(asr0.color != blue) asr0.color = Color.grey;
+                if(asr2.color != blue) asr2.color = Color.grey;
+                if(asr6.color != blue) asr6.color = Color.grey;
                 
                 selectedAnimalObj = myAnimal1;
                 StartCoroutine(DoTargetSelect());
                 break;
             case 2:
-                asr1.color = Color.grey;
-                asr0.color = Color.grey;
-                
+                if(asr1.color != blue) asr1.color = Color.grey;
+                if(asr0.color != blue)asr0.color = Color.grey;
+                if(asr6.color != blue) asr6.color = Color.grey;
                 selectedAnimalObj = myAnimal2;
+                StartCoroutine(DoTargetSelect());
+                break;
+            case 3:
+                if(asr1.color != blue) asr1.color = Color.grey;
+                if(asr0.color != blue)asr0.color = Color.grey;
+                if(asr2.color != blue) asr2.color = Color.grey;
+                selectedAnimalObj = myAnimal3;
                 StartCoroutine(DoTargetSelect());
                 break;
         }
@@ -691,7 +920,7 @@ public class GameLogic : MonoBehaviour
         yield return null;
     }
 
-    private void DisplayPossibleMoveTiles()
+    public void DisplayPossibleMoveTiles()
     {
         if (selectedAnimal > -1)
         {
@@ -701,8 +930,8 @@ public class GameLogic : MonoBehaviour
             int max_x_border = 5;
             int min_y_border = -7;
             int max_y_border = 11;
-            Tuple<int, int>[] currentAnimalPositions = new Tuple<int, int>[user_animals_count];
-            Tuple<int, int>[] currentEnemyAnimalPositions = new Tuple<int, int>[user_animals_count];
+            Tuple<int, int>[] currentAnimalPositions = new Tuple<int, int>[numberOfAnimals/2];
+            Tuple<int, int>[] currentEnemyAnimalPositions = new Tuple<int, int>[numberOfAnimals/2];
             int animalId;
             if (isPlayerOne)
             {
@@ -710,13 +939,34 @@ public class GameLogic : MonoBehaviour
             }
             else
             {
-                animalId = (int)animalInfo[selectedAnimal + 3].x;
+                animalId = (int)animalInfo[selectedAnimal + numberOfAnimals/2].x;
             }
-            for(int i = 0; i < user_animals_count; i++)
+
+            if (InputLogic.Instance.isTutorial)
+            {
+                animalId = ConstantVars.cat_id;
+                if (!TutorialController.Instance.hasTapped)
+                {
+                    TutorialController.Instance.hasTapped = true;
+                    TutorialController.Instance.tapSquareText.SetActive(true);
+                    TutorialController.Instance.tapCatText.SetActive(false);
+                }
+
+                if (!GameController.Instance.cA)
+                {
+                    StartCoroutine(GameController.Instance.StartupCircleNoDelay());
+                }
+            }
+            for(int i = 0; i < numberOfAnimals/2; i++)
             {
                 currentAnimalPositions[i] = new Tuple<int, int>(Mathf.RoundToInt(myAnimals[i].transform.position.x), Mathf.RoundToInt(myAnimals[i].transform.position.y));
                 currentEnemyAnimalPositions[i] = new Tuple<int, int>(Mathf.RoundToInt(enemyAnimals[i].transform.position.x), Mathf.RoundToInt(enemyAnimals[i].transform.position.y));
             }
+
+            Vector3 selectAnimalPos = selectedAnimalObj.transform.position;
+            int x = Mathf.RoundToInt(selectAnimalPos.x);
+            int y = Mathf.RoundToInt(selectAnimalPos.y);
+            greyedOut.transform.position = selectAnimalPos;
             List<Vector3> moveCoords = new List<Vector3>();
             bool[,] moveSpaces = GameHelperMethods.getMoveSpaces(animalId);
                 for(int i = 0; i < max_x_move;i ++)
@@ -728,18 +978,20 @@ public class GameLogic : MonoBehaviour
                             Vector3 selectAnimalObjPos = selectedAnimalObj.transform.position;
                             int newX =  Mathf.RoundToInt(selectAnimalObjPos.x - (max_x_move/2) + i);
                             int newY = Mathf.RoundToInt(selectAnimalObjPos.y + (max_y_move / 2) - j);
+                            
                             bool shouldPutTile = true;
                             foreach(Tuple<int,int> t in currentAnimalPositions)
                             {
-                                if (t.Item1 == newX && t.Item2 == newY)
+                                if (t.Item1 == newX && t.Item2 == newY && !InputLogic.Instance.isTutorial)
                                 {
                   
                                     shouldPutTile = false;
+                                    //PutGreyBox(x+i, y+j);
                                 }
                             }
                             foreach (Tuple<int, int> t in currentEnemyAnimalPositions)
                             {
-                                if (t.Item1 == newX && t.Item2 == newY)
+                                if (t.Item1 == newX && t.Item2 == newY && !InputLogic.Instance.isTutorial)
                                 {
                           
                                     shouldPutTile = false;
@@ -748,13 +1000,20 @@ public class GameLogic : MonoBehaviour
                             if (newX <= min_x_border || newX >= max_x_border || newY <= min_y_border || newY >= max_y_border ||
                                     (shouldPutTile == false))
                             {
+                                if(!(i==3 && j == 3))
+                                {
+                                    PutGreyBox(x+i, y-j);
+                                }
 
-  
                             } else
                             {
                                 moveCoords.Add(new Vector3(newX, newY, 0));
                             }
                                 
+                        }
+                        else
+                        {
+                            PutGreyBox(x+i, y-j);
                         }
                     }
                 }
@@ -770,6 +1029,12 @@ public class GameLogic : MonoBehaviour
                     }
                 }
         }
+    }
+
+    private void PutGreyBox(int x, int y)
+    {
+        GameObject go = Instantiate(greyBox, new Vector3(x-3, y+3), Quaternion.identity);
+        greySpaces.Add(go);
     }
     /*
     private IEnumerator SelectCardProcess(int id)
@@ -905,57 +1170,155 @@ public class GameLogic : MonoBehaviour
     */
     public void MoveToStartingPosition()
     {
-        if (myAnimal0 != null && myAnimal1 != null && myAnimal2 != null && enemyAnimal0 != null && enemyAnimal1 != null && enemyAnimal2 != null)
+        myAnimal0.transform.rotation = Quaternion.identity;
+        myAnimal1.transform.rotation = Quaternion.identity;
+        myAnimal2.transform.rotation = Quaternion.identity;
+        myAnimal3.transform.rotation = Quaternion.identity;
+        enemyAnimal0.transform.rotation = Quaternion.identity;
+        enemyAnimal1.transform.rotation = Quaternion.identity;
+        enemyAnimal2.transform.rotation = Quaternion.identity;
+        enemyAnimal3.transform.rotation = Quaternion.identity;
+        /*foreach(GameObject go in myAnimals)
+        {
+            go.transform.GetChild(0);
+        }*/
+        if (myAnimal0 != null && myAnimal1 != null && myAnimal2 != null && 
+            enemyAnimal0 != null && enemyAnimal1 != null && enemyAnimal2 != null)
         {
             if (isPlayerOne)
             {
-                myAnimal0.transform.position = new Vector3(animalInfo[0].y + hor_offset, animalInfo[0].z + vert_offset, 0);
-                myAnimal1.transform.position = new Vector3(animalInfo[1].y + hor_offset, animalInfo[1].z + vert_offset, 0);
-                myAnimal2.transform.position = new Vector3(animalInfo[2].y + hor_offset, animalInfo[2].z + vert_offset, 0);
-
-                enemyAnimal0.transform.position = new Vector3(animalInfo[3].y + hor_offset, animalInfo[3].z + vert_offset, 0);
-                enemyAnimal1.transform.position = new Vector3(animalInfo[4].y + hor_offset, animalInfo[3].z + vert_offset, 0);
-                enemyAnimal2.transform.position = new Vector3(animalInfo[5].y + hor_offset, animalInfo[3].z + vert_offset, 0);
-
+                for (int i = 0; i < myAnimals.Length; i++)
+                {
+                    myAnimals[i].transform.position = new Vector3(animalInfo[i].y + hor_offset, animalInfo[i].z + vert_offset, 0);
+                }
+                for (int i = 0; i < enemyAnimals.Length; i++)
+                {
+                    enemyAnimals[i].transform.position = new Vector3(animalInfo[i+numberOfAnimals/2].y + hor_offset, animalInfo[i+numberOfAnimals/2].z + vert_offset, 0);
+                }
             }
             else
             {
-                myAnimal0.transform.position = new Vector3(flipX((int)animalInfo[3].y) + hor_offset, flipY((int)animalInfo[3].z) + vert_offset, 0);
-                myAnimal1.transform.position = new Vector3(flipX((int)animalInfo[4].y) + hor_offset, flipY((int)animalInfo[4].z) + vert_offset, 0);
-                myAnimal2.transform.position = new Vector3(flipX((int)animalInfo[5].y) + hor_offset, flipY((int)animalInfo[5].z) + vert_offset, 0);
-
-                enemyAnimal0.transform.position = new Vector3(flipX((int)animalInfo[0].y) + hor_offset, flipY((int)animalInfo[0].z) + vert_offset, 0);
-                enemyAnimal1.transform.position = new Vector3(flipX((int)animalInfo[1].y) + hor_offset, flipY((int)animalInfo[1].z) + vert_offset, 0);
-                enemyAnimal2.transform.position = new Vector3(flipX((int)animalInfo[2].y)+ hor_offset, flipY((int)animalInfo[2].z) + vert_offset, 0);
+                for (int i = 0; i < myAnimals.Length; i++)
+                {
+                    myAnimals[i].transform.position = new Vector3(flipX((int)animalInfo[i+numberOfAnimals/2].y) + hor_offset, 
+                        flipY((int)animalInfo[i+numberOfAnimals/2].z) + vert_offset, 0);
+                }
+                for (int i = 0; i < enemyAnimals.Length; i++)
+                {
+                    enemyAnimals[i].transform.position = new Vector3(flipX((int)animalInfo[i].y) + hor_offset, 
+                        flipY((int)animalInfo[i].z) + vert_offset, 0);
+                }
             }
-        } else
-        {
-            Debug.Log("animals null");
-        }
+        } 
     }
 
     private void LoadAnimalSprites()
     {
         if (IsPlayerOne)
         {
-            asr0.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2];
-            asr1.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2];
-            asr2.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2];
-            asr3.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2+1];
-            asr4.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2+1];
-            asr5.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2+1];
+            if (currentGameMode == GameMode.DEFAULT)
+            {
+                asr0.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2];
+                asr1.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2];
+                asr2.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2];
+                asr3.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2+1];
+                asr4.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2+1];
+                asr5.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2+1];
+            }
+            else
+            {
+                asr0.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2];
+                asr1.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2];
+                asr2.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2];
+                asr6.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2];
+                asr3.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2+1];
+                asr4.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2+1];
+                asr5.sprite = AnimalSpriteArray[(int)animalInfo[6].x*2+1];
+                asr7.sprite = AnimalSpriteArray[(int)animalInfo[7].x*2+1];
+            }
+            
         }
         else
         {
-            asr0.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2];
-            asr1.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2];
-            asr2.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2];
-            asr3.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2+1];
-            asr4.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2+1];
-            asr5.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2+1];
+            if (currentGameMode == GameMode.DEFAULT)
+            {
+                asr0.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2];
+                asr1.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2];
+                asr2.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2];
+                asr3.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2+1];
+                asr4.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2+1];
+                asr5.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2+1];
+            }
+            else
+            {
+                asr0.sprite = AnimalSpriteArray[(int)animalInfo[4].x*2];
+                asr1.sprite = AnimalSpriteArray[(int)animalInfo[5].x*2];
+                asr2.sprite = AnimalSpriteArray[(int)animalInfo[6].x*2];
+                asr3.sprite = AnimalSpriteArray[(int)animalInfo[0].x*2+1];
+                asr4.sprite = AnimalSpriteArray[(int)animalInfo[1].x*2+1];
+                asr5.sprite = AnimalSpriteArray[(int)animalInfo[2].x*2+1];
+                
+                asr6.sprite = AnimalSpriteArray[(int)animalInfo[7].x*2];
+                
+                asr7.sprite = AnimalSpriteArray[(int)animalInfo[3].x*2+1];
+            }
+            
         }
         
         
+    }
+
+    public void DoBoardReset((byte, byte)[,] gameBoard)
+    {
+        foreach(GameObject go in CrystalMap.Values)
+        {
+            Destroy(go);
+        }
+        CrystalMap.Clear();
+        foreach(GameObject go in PlantController.Instance.plantObjects.Values)
+        {
+            Destroy(go);
+        }
+        PlantController.Instance.plantObjects.Clear();
+        foreach(GameObject go in PlantController.Instance.dirtTiles.Values)
+        {
+            Destroy(go);
+        }
+        PlantController.Instance.dirtTiles.Clear();
+        foreach(GameObject g in PlantController.Instance.animalItems.Values)
+        {
+            Destroy(g);
+        }
+        PlantController.Instance.animalItems.Clear();
+        foreach (GameObject g in AnimalEffectController.Instance.shellList)
+        {
+            Destroy(g);
+        }
+        foreach (GameObject g in AnimalEffectController.Instance.teddyBearsDictionary.Values)
+        {
+            Destroy(g);
+        }
+        AnimalEffectController.Instance.teddyBearsDictionary.Clear();
+        foreach (GameObject g in AnimalEffectController.Instance.dinoExtinctLocations.Values)
+        {
+            Destroy(g);
+        }
+        AnimalEffectController.Instance.dinoExtinctLocations.Clear();
+        foreach (GameObject g in AnimalEffectController.Instance.animalSpecialFx.Values)
+        {
+            g.transform.SetParent(null);
+            Destroy(g);
+        }
+        AnimalEffectController.Instance.animalSpecialFx.Clear();
+        AnimalEffectController.Instance.shellList.Clear();
+        InventoryController.Instance.inventoryGameItems.Clear();
+        GameEventRoutineManager.Instance.ClearQueues();
+        PlantController.Instance.poppyObjects.Clear();
+        PlantController.Instance.shieldObjects.Clear();
+        
+        GameObject fx = Instantiate(boardResetFx, new Vector3(0, 0, 0), Quaternion.identity);
+        InitializeCrystals(gameBoard);
+        Destroy(fx, 3);
     }
 
     public void InitializeCrystals((byte,byte)[,] gameBoard)
@@ -972,17 +1335,66 @@ public class GameLogic : MonoBehaviour
             }
         }
     }
-    //each byte represents id, x, or y locaiton p1a0id = player 1 animal 0 id
-    public void StartTransition(byte p1a0id, byte p1a0x, byte p1a0y, byte p1a1id, byte p1a1x, byte p1a1y, byte p1a2id, 
-        byte p1a2x, byte p1a2y, byte p2a0id, byte p2a0x, byte p2a0y, byte p2a1id, byte p2a1x, byte p2a1y, byte p2a2id, 
-        byte p2a2x, byte p2a2y, (byte,byte)[,] gameBoard, byte a0Id, byte a0Key, byte a1Id, byte a1Key,byte a2Id, byte a2Key,
-        byte a3Id, byte a3Key,byte a4Id, byte a4Key,byte a5Id, byte a5Key, bool c0dirt, bool c1dirt,bool c2dirt,bool c3dirt,
-        bool c4dirt,bool c5dirt, byte item0, byte item1, byte item2, byte item3, byte item4, byte item5)
+
+    private IEnumerator fadeBlack()
     {
-        InputLogic.Instance.StopMenuSource();
+        yield return StartCoroutine(TransitionController.Instance.fadeBlackIn(2, 1f));
+        if (!isLoaded)
+        {
+            isLoaded = true;
+            GameObject.FindGameObjectWithTag("LoginDisplay").SetActive(false);
+        }
+        enableObjects();
+        StartCoroutine(TransitionController.Instance.fadeBlackOut(2));
+    }
+    //each byte represents id, x, or y locaiton p1a0id = player 1 animal 0 id
+    public void StartTransition(AnimalBoardEntry[] animalStartingEntries, (byte,byte)[,] gameBoard, CheckForCrystalReturn[] crystalReturns,
+        GameMode gameMode, int number_of_animals, int playerNum)
+    {
+        this.playerNum = playerNum;
+        numberOfAnimals = number_of_animals;
+        numberOfPlayers = (gameMode == GameMode.TWOS || gameMode == GameMode.TWOS_AI) ? 4 : 2;
+        user_animals_count = numberOfAnimals / numberOfPlayers;
+        currentGameMode = gameMode;
+        animalMoved = new bool[user_animals_count];
+        AnimalList = new GameObject[numberOfAnimals];
+        animalInfo = new Vector3[numberOfAnimals];
+        InitializeObjects();
+        AnimalEffectController.Instance.spinEggs = false;
+        GameEventRoutineManager.Instance.ClearQueues();
+        StartCoroutine(fadeBlack());
+        foreach(GameObject g in PlantController.Instance.animalItems.Values)
+        {
+            Destroy(g);
+        }
+        PlantController.Instance.animalItems.Clear();
+        myDeadAnimals.Clear();
+        enemyDeadAnimals.Clear();
+        gameStarted = true;
+        TimerController.Instance.SetTimerFull();
+        if (IsPlayerOne)
+        {
+            GameController.Instance.SetNametagText(GameController.Instance.player2Name);
+        }
+        else
+        {
+            GameController.Instance.SetNametagText(GameController.Instance.player1Name);
+        }
+
+        for (int i = 0; i < user_animals_count; i++)
+        {
+            HealthController.Instance.UpdateAnimalHealth(i, 1);
+        }
+        for (int i = 0; i < user_animals_count; i++)
+        {
+            HealthController.Instance.UpdateAnimalXp(i, 0);
+        }
+        
+        
+        
         GameController.Instance.DoStartCountdown();
         StartCoroutine(disableAnimals());
-        for (int i = 0; i < max_animals; i++)
+        for (int i = 0; i < number_of_animals; i++)
         {
             var ga = new GameAnimal();
             ga.FireCount = 0;
@@ -991,26 +1403,23 @@ public class GameLogic : MonoBehaviour
             ga.DecayCount = 0;
             GameAnimals[i] = ga;
         }
-        animalInfo[0] = new Vector3((float)p1a0id, (float)p1a0x, (float)p1a0y);
-        animalInfo[1] = new Vector3((float)p1a1id, (float)p1a1x, (float)p1a1y);
-        animalInfo[2] = new Vector3((float)p1a2id, (float)p1a2x, (float)p1a2y);
-        animalInfo[3] = new Vector3((float)p2a0id, (float)p2a0x, (float)p2a0y);
-        animalInfo[4] = new Vector3((float)p2a1id, (float)p2a1x, (float)p2a1y);
-        animalInfo[5] = new Vector3((float)p2a2id, (float)p2a2x, (float)p2a2y);
+        
+        animalInfo = new Vector3[number_of_animals];
+        for (int i = 0; i < number_of_animals; i++)
+        {
+            animalInfo[i] = new Vector3(animalStartingEntries[i].Id, animalStartingEntries[i].X,
+                animalStartingEntries[i].Y);
+        }
+        
         MoveToStartingPosition();
         
         LoadAnimalSprites();
         InitializeCrystals(gameBoard);
         HealthController.Instance.InitializeHeadSprites();
-        if (!isLoaded)
-        {
-            isLoaded = true;
-            GameObject.FindGameObjectWithTag("LoginDisplay").SetActive(false);
-        }
-        StartCoroutine(GameController.Instance.SpawnParachutingAnimals(a0Id, a0Key, a1Id, a1Key, a2Id, a2Key,
-            a3Id, a3Key, a4Id, a4Key, a5Id, a5Key, c0dirt, c1dirt, c2dirt, c3dirt, c4dirt, c5dirt, item0, item1,item2,
-            item3,item4,item5, p1a0x, p1a0y, p1a1x, p1a1y, p1a2x, p1a2y, p2a0x, p2a0y,p2a1x, p2a1y, p2a2x, p2a2y));
-        enableObjects();
+        
+        StartCoroutine(GameController.Instance.SpawnParachutingAnimals(crystalReturns, animalStartingEntries));
+        
+        
     }
 
     private void SendAttackRequest(int animalId, int targetId)
@@ -1041,6 +1450,7 @@ public class GameLogic : MonoBehaviour
 
     public void EndGame()
     {
+        gameStarted = false;
         foreach(GameObject go in CrystalMap.Values)
         {
             Destroy(go);
@@ -1051,19 +1461,64 @@ public class GameLogic : MonoBehaviour
             Destroy(go);
         }
         PlantController.Instance.plantObjects.Clear();
-        foreach(GameObject go in PlantController.Instance.dirtTiles)
+        foreach(GameObject go in PlantController.Instance.dirtTiles.Values)
         {
             Destroy(go);
         }
         PlantController.Instance.dirtTiles.Clear();
-
-        for (int i = 0; i < max_animals; i++)
+        foreach(GameObject g in PlantController.Instance.animalItems.Values)
+        {
+            Destroy(g);
+        }
+        PlantController.Instance.animalItems.Clear();
+        foreach (GameObject go in InventoryController.Instance.inventoryItems)
+        {
+            Destroy(go);
+        }
+        InventoryController.Instance.inventoryItems.Clear();
+        
+        foreach (GameObject g in AnimalEffectController.Instance.shellList)
+        {
+            Destroy(g);
+        }
+        foreach (GameObject g in AnimalEffectController.Instance.teddyBearsDictionary.Values)
+        {
+            Destroy(g);
+        }
+        AnimalEffectController.Instance.teddyBearsDictionary.Clear();
+        foreach (GameObject g in AnimalEffectController.Instance.dinoExtinctLocations.Values)
+        {
+            Destroy(g);
+        }
+        AnimalEffectController.Instance.dinoExtinctLocations.Clear();
+        foreach (GameObject g in AnimalEffectController.Instance.animalSpecialFx.Values)
+        {
+            g.transform.SetParent(null);
+            Destroy(g);
+        }
+        AnimalEffectController.Instance.animalSpecialFx.Clear();
+        AnimalEffectController.Instance.shellList.Clear();
+        InventoryController.Instance.inventoryGameItems.Clear();
+        GameEventRoutineManager.Instance.ClearQueues();
+        PlantController.Instance.poppyObjects.Clear();
+        PlantController.Instance.shieldObjects.Clear();
+        foreach (var animal in myAnimals)
+        {
+            animal.transform.GetChild(1).GetComponent<SpriteRenderer>().color = Color.white;
+        }
+        foreach (var animal in enemyAnimals)
+        {
+            animal.transform.GetChild(1).GetComponent<SpriteRenderer>().color = Color.white;
+        }
+        myDeadAnimals.Clear();
+        enemyDeadAnimals.Clear();
+        for (int i = 0; i < numberOfAnimals; i++)
         {
             GameAnimals[i] = null;
             CrystalController.Instance.DestroyChildrenParticles(CrystalController.Instance.GetAnimalNoSwitch(i));
         }
         gameObjects.SetActive(false);
-        SceneManager.SetActiveScene(SceneManager.GetSceneByName("LoginRegisterScene"));
+        //SceneManager.SetActiveScene(SceneManager.GetSceneByName("LoginRegisterScene"));
         isLoaded = false;
         IsPlayerOne = false;
         InputLogic.Instance.EndGame();
@@ -1076,6 +1531,7 @@ public class GameLogic : MonoBehaviour
             TimerController.Instance.StartTimer();
             //turnIndicatorSR.sprite = greenTurnSprite;
             isMyTurn = true;
+            StartCoroutine(TransitionController.Instance.doWhiteFlash());
             if (selectedAnimal > -1)
             {
                 GameController.Instance.SetCA(true);
@@ -1086,12 +1542,13 @@ public class GameLogic : MonoBehaviour
         } 
         else
         {
+            StartCoroutine(TransitionController.Instance.doBlackFlash());
             TimerController.Instance.SetTimerFull();
             isMyTurn = false;
             GameController.Instance.SetCA(false);
             GameController.Instance.SetDoScaling(false);
             StartCoroutine(GameController.Instance.StopAndFadeCircle());
-            StartCoroutine(DeselectAnimal(false));
+            StartCoroutine(DeselectAnimal(true));
         }
         
     }
@@ -1100,12 +1557,79 @@ public class GameLogic : MonoBehaviour
     */
     public IEnumerator enableAnimals()
     {
-        myAnimal0.SetActive(true);
-        myAnimal1.SetActive(true);
-        myAnimal2.SetActive(true);
-        enemyAnimal0.SetActive(true);
-        enemyAnimal1.SetActive(true);
-        enemyAnimal2.SetActive(true);
+        if (GameLogic.Instance.IsPlayerOne)
+        {
+            Debug.Log("player one");
+            for (int i = 0; i < numberOfAnimals/2; i++)
+            {
+                if (Constants.mySpriteOffsets.TryGetValue((int)animalInfo[i].x, out float val))
+                {
+                    //Debug.Log("offset added");
+                    myAnimals[i].transform.GetChild(1).transform.position =
+                        new Vector3(
+                            myAnimals[i].transform.position.x,
+                            myAnimals[i].transform.position.y + val,
+                            0
+                        );
+                }
+            } 
+            for (int i = 0; i < numberOfAnimals/2; i++)
+            {
+                if (Constants.enemySpriteOffsets.TryGetValue((int)animalInfo[i + numberOfAnimals/2].x, out float val))
+                {
+                    //Debug.Log("offset added");
+                    enemyAnimals[i].transform.GetChild(1).transform.position =
+                        new Vector3(
+                            enemyAnimals[i].transform.position.x,
+                            enemyAnimals[i].transform.position.y + val,
+                            0
+                        );
+                }
+            
+            } 
+        }
+        else
+        {
+            for (int i = 0; i <  numberOfAnimals/2; i++)
+            {
+                if (Constants.mySpriteOffsets.TryGetValue((int)animalInfo[i].x, out float val))
+                {
+                    //Debug.Log("offset added");
+                    enemyAnimals[i].transform.GetChild(1).transform.position =
+                        new Vector3(
+                            enemyAnimals[i].transform.position.x,
+                            enemyAnimals[i].transform.position.y + val,
+                            0
+                        );
+                }
+            } 
+            for (int i = 0; i <  numberOfAnimals/2; i++)
+            {
+                if (Constants.enemySpriteOffsets.TryGetValue((int)animalInfo[i +  numberOfAnimals/2].x, out float val))
+                {
+                    //Debug.Log("offset added");
+                    myAnimals[i].transform.GetChild(1).transform.position =
+                        new Vector3(
+                            myAnimals[i].transform.position.x,
+                            myAnimals[i].transform.position.y + val,
+                            0
+                        );
+                }
+            
+            } 
+        }
+
+        foreach (GameObject g in myAnimals)
+        {
+            g.SetActive(true);
+            CrystalController.Instance.UpdateLayerAnimal(g);
+        }
+        foreach (GameObject g in enemyAnimals)
+        {
+            g.SetActive(true);
+            CrystalController.Instance.UpdateLayerAnimal(g);
+        }
+
         yield return null;
     }
     public IEnumerator disableAnimals()
@@ -1113,15 +1637,17 @@ public class GameLogic : MonoBehaviour
         myAnimal0.SetActive(false);
         myAnimal1.SetActive(false);
         myAnimal2.SetActive(false);
+        myAnimal3.SetActive(false);
         enemyAnimal0.SetActive(false);
         enemyAnimal1.SetActive(false);
         enemyAnimal2.SetActive(false);
+        enemyAnimal3.SetActive(false);
         yield return null;
     }
     public void enableObjects()
     {
         gameObjects.SetActive(true);
-        SceneManager.SetActiveScene(SceneManager.GetSceneByName("GameScene1"));
+        //SceneManager.SetActiveScene(SceneManager.GetSceneByName("GameScene1"));
     }
     public static int flipX(int x)
     {
@@ -1142,10 +1668,18 @@ public class GameLogic : MonoBehaviour
         {
             return animalId;
         }
-        
-        return (animalId == 0
+
+        if (currentGameMode == GameMode.DEFAULT)
+        {
+            return (animalId == 0
                 ? 3
                 : (animalId == 1 ? 4 : (animalId == 2 ? 5 : (animalId == 3 ? 0 : (animalId == 4 ? 1 : 2)))));
+        }
+        else
+        {
+            return (animalId == 0 ? 4 : (animalId == 1 ? 5 : (animalId == 2 ? 6 : (animalId == 3 ? 7 : (animalId == 4 ? 0 : (animalId == 5 ? 1 : (animalId == 6 ? 2 : 3)))))));
+        }
+        
     }
 
 }

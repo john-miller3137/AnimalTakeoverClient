@@ -1,4 +1,7 @@
 using System;
+using Network;
+using Riptide;
+using TMPro;
 using UnityEngine;
 
 namespace Scripts.LoginRegister
@@ -24,18 +27,94 @@ namespace Scripts.LoginRegister
             }
         }
 
-        [SerializeField] private GameObject stars;
-        private int degrees;
+        [SerializeField] private GameObject stars, mainMenuSong;
+        public GameObject searchingText;
+        private AudioSource mmSong;
+        private TextMeshProUGUI _textMeshProUGUI;
+        private float movingSpeed;
+        int finishedCount = 0;
+        public bool searchingForGame = false;
+        private int counterSearch;
+        private string searchingString = "searching";
+        private bool goingUp = true;
+        
 
         private void Start()
         {
-            degrees = 0;
+            _textMeshProUGUI = searchingText.GetComponent<TextMeshProUGUI>();
+            searchingText.SetActive(false);
+            movingSpeed = 2;
+            mmSong = mainMenuSong.GetComponent<AudioSource>();
+            counterSearch = 0;
+            
         }
 
         private void Update()
         {
-            stars.transform.Rotate(new Vector3(0, 0, .001f));
+            if (searchingForGame)
+            {
+                if (goingUp)
+                {
+                    counterSearch++;
+                }
+                else
+                {
+                    counterSearch--;
+                }
 
+                if (counterSearch <= 0)
+                {
+                    goingUp = true;
+                }
+
+                if (counterSearch > 0 && counterSearch < 100)
+                {
+                    _textMeshProUGUI.text = "searching";
+                }
+                else if (counterSearch >= 100 && counterSearch < 200)
+                {
+                    _textMeshProUGUI.text = "searching.";
+                } else if (counterSearch >= 200 && counterSearch < 300)
+                {
+                    _textMeshProUGUI.text = "searching..";
+                } else if (counterSearch >= 300 && counterSearch < 400)
+                {
+                    _textMeshProUGUI.text = "searching...";
+                }else if (counterSearch >= 400)
+                {
+                    goingUp = false;
+                }
+            }
+            stars.transform.Rotate(Vector3.forward, movingSpeed * Time.deltaTime);
+            if (!mmSong.isPlaying && !InputLogic.Instance.isTutorial)
+            {
+                finishedCount++;
+                if (finishedCount > 1)
+                {
+                    if (mmSong.isActiveAndEnabled)
+                    {
+                        mmSong.Play();
+                    }
+                    
+                }
+            }
+            else
+            {
+                finishedCount = 0;
+            }
+        }
+        
+        public void CancelButton()
+        {
+            InputLogic.Instance.animalInfoButton.SetActive(true);
+            InputLogic.Instance.shopButton.SetActive(true);
+            InputLogic.Instance.cancelButton.SetActive(false);
+            InputLogic.Instance.findGameButton.SetActive(true);
+            InputLogic.Instance.findGameTwosButton.SetActive(true);
+            InputLogic.Instance.findGameTwosAiButton.SetActive(true);
+            MainMenuController.Instance.searchingForGame = false;
+            MainMenuController.Instance.searchingText.SetActive(false);
+            MessageHandlers.CancelSearch();
         }
     }
 }

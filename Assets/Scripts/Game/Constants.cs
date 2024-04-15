@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using Server.Game;
+using SharedLibrary;
+
 public class Constants
 {
     public const int vert_offset = -6;
@@ -42,4 +46,48 @@ public class Constants
     public static float hedgehog_back_offset = 0.05f;
     public static float hedgehog_offset = 0.05f;
     public static float whale_offset = 0.05f;
+
+    private static float owl_offset = 0.0f;
+    private static float frog_back_offset = -.15f;
+    private static float frog_offset = -0.2f;
+
+    public static Dictionary<int, float> enemySpriteOffsets = new Dictionary<int, float> {
+    {
+      1, owl_offset  
+    },
+    {
+        2, chicken_offset  
+    },
+    {
+        ConstantVars.frog_id, frog_back_offset 
+    },
+    {
+        5, bunny_offset  
+    },
+    {
+        10, hedgehog_offset  
+    },
+    {
+        12, whale_offset  
+    }
+    };
+    
+    public static Dictionary<int, float> mySpriteOffsets = new Dictionary<int, float> {
+        
+        {
+            ConstantVars.chicken_id, chicken_back_offset  
+        },
+        {
+            ConstantVars.frog_id, frog_back_offset  
+        },
+        {
+            ConstantVars.deer_id, deer_back_offset  
+        },
+        {
+            ConstantVars.elephant_id, elephant_back_offset  
+        },
+        {
+            ConstantVars.hedgehog_id, hedgehog_back_offset  
+        }
+    };
 }

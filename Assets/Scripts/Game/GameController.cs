@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.ComTypes;
 using Scripts;
+using SharedLibrary.ReturnCodes;
+using TMPro;
 using UnityEditor.Rendering.Universal;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -34,8 +36,19 @@ namespace Game
         [SerializeField] private GameObject ParachutingAnimal;
         [SerializeField] private GameObject moveSound, firingUpSound, launchSound, explosionSound;
         private AudioSource moveSource, firingUpSource, launchSource, explosionSource;
-        private void Start()
+        public GameObject nametag;
+        private TextMeshProUGUI nametagText;
+        public string player1Name, player2Name;
+
+        [SerializeField] private AudioClip bombDropSound,
+            bombExplosionSound,
+            firingUpSoundClip,
+            launchSoundClip,
+            explosionClip;
+        private async void Start()
         {
+            //await InputLogic.Instance.WaitForSceneLoads();
+            nametagText = nametag.GetComponent<TextMeshProUGUI>();
             circleLight = circle.GetComponent<Light2D>();
             sr = outerCircle.GetComponent<SpriteRenderer>();
             sr2 = circle.GetComponent<SpriteRenderer>();
@@ -48,11 +61,17 @@ namespace Game
             explosionSource = explosionSound.GetComponent<AudioSource>();
             //DoStartCountdown();
             //StartCoroutine(StartupCircleNoDelay());
+            //InputLogic.Instance.gameSceneLoaded++;
         }
 
         private void Update()
         {
             
+        }
+
+        public void SetNametagText(String text)
+        {
+            nametagText.text = text;
         }
 
         public void PlayMoveSound()
@@ -61,17 +80,52 @@ namespace Game
         }
         public void PlayFiringUpSound()
         {
+            firingUpSource.clip = firingUpSoundClip;
             firingUpSource.Play();
+        }
+        public void StopFiringUpSound()
+        {
+            firingUpSource.Stop();
         }
         public void PlayLaunchSound()
         {
+            launchSource.clip = launchSoundClip;
             launchSource.Play();
+        }
+        public void PlayDragonFire()
+        {
+            launchSource.clip = AnimalEffectController.Instance.dragonFireSound;
+            launchSource.Play();
+        }
+        public void StopLaunchSound()
+        {
+            launchSource.Stop();
         }
         public void PlayExplosionSound()
         {
             explosionSource.Play();
         }
         
+        public void PlayBombDropSound()
+        {
+            launchSource.clip = bombDropSound;
+            launchSource.Play();
+        }
+        public void PlayBombExplosionSound()
+        {
+            explosionSource.clip = bombExplosionSound;
+            if (!explosionSource.isPlaying)
+            {
+                explosionSource.Play();
+            }
+            
+        }
+        
+        public void PlayFiringUpFx(AudioClip clip)
+        {
+            firingUpSource.clip = clip;
+            firingUpSource.Play();
+        }
 
 
         public void DoStartCountdown()
@@ -79,10 +133,13 @@ namespace Game
             StartCoroutine(StartCountdown());
         }
 
-        [SerializeField] private GameObject oneText, twoText, threeText, gText, oText, canvas, perfectText, perfectParticles,
-            inventoryCanvas, gameStartingText, outerCircle, circle, oofText, missText;
+        [SerializeField] private GameObject oneText, twoText, threeText, gText, oText, perfectText, perfectParticles,
+            inventoryCanvas, gameStartingText, circle, oofText, missText;
+
+        public GameObject canvas;
+        public GameObject outerCircle;
         private Vector3 initialScale;
-        private SpriteRenderer sr, sr2;
+        public SpriteRenderer sr, sr2;
         private Vector3 targetScale;
         private Light2D circleLight;
         private float elapsedTime;
@@ -297,13 +354,10 @@ namespace Game
             doScaling = value;
         }
 
-        public IEnumerator SpawnParachutingAnimals(byte a0Id, byte a0Key, byte a1Id, byte a1Key, byte a2Id, byte a2Key,
-            byte a3Id, byte a3Key, byte a4Id, byte a4Key, byte a5Id, byte a5Key, bool c0dirt, bool c1dirt,bool c2dirt,
-            bool c3dirt,bool c4dirt,bool c5dirt, byte item0, byte item1, byte item2, byte item3, byte item4, byte item5,
-            byte p1a0x, byte p1a0y, byte p1a1x, byte p1a1y, byte p1a2x, byte p1a2y, byte p2a0x, byte p2a0y, byte p2a1x, 
-            byte p2a1y, byte p2a2x, byte p2a2y)
+        public IEnumerator SpawnParachutingAnimals(CheckForCrystalReturn[] crystalReturns, AnimalBoardEntry[] animalBoardEntries)
         {
             List<GameObject> parachutingList = new List<GameObject>();
+            yield return new WaitForSeconds(1);
             foreach(Vector3 v in GameLogic.Instance.animalInfo)
             {
                 
@@ -330,48 +384,60 @@ namespace Game
             }
 
             yield return new WaitForSeconds(7);
-            Debug.Log($"{a0Id} {a0Key} {a1Id} {a1Key}");
             if (GameLogic.Instance.IsPlayerOne)
             {
-                CrystalController.Instance.PickupCrystal(0, a0Id, a0Key, (int)parachutingList[0].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[0].transform.position.y- Constants.vert_offset, 0, c0dirt);
-                CrystalController.Instance.PickupCrystal(1, a1Id, a1Key, (int)parachutingList[1].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[1].transform.position.y - Constants.vert_offset, 0, c1dirt);
-                CrystalController.Instance.PickupCrystal(2, a2Id, a2Key, (int)parachutingList[2].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[2].transform.position.y - Constants.vert_offset, 0, c2dirt);
-                CrystalController.Instance.PickupCrystal(3, a3Id, a3Key, (int)parachutingList[3].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[3].transform.position.y - Constants.vert_offset, 0, c3dirt);
-                CrystalController.Instance.PickupCrystal(4, a4Id, a4Key, (int)parachutingList[4].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[4].transform.position.y - Constants.vert_offset, 0, c4dirt);
-                CrystalController.Instance.PickupCrystal(5, a5Id, a5Key, (int)parachutingList[5].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[5].transform.position.y - Constants.vert_offset, 0, c5dirt);
+                for (int i = 0; i < GameLogic.Instance.numberOfAnimals; i++)
+                {
+                    CrystalController.Instance.PickupCrystal(i, crystalReturns[i].CrystalId, crystalReturns[i].CrystalKey, (int)parachutingList[i].transform.position.x - Constants.hor_offset, 
+                        (int)parachutingList[i].transform.position.y- Constants.vert_offset, 0, crystalReturns[i].SpawnDirt, -1, -1);
+                }
             }
             else
             {
-                CrystalController.Instance.PickupCrystal(0, a3Id, a3Key, (int)parachutingList[3].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[3].transform.position.y- Constants.vert_offset, 0, c3dirt);
-                CrystalController.Instance.PickupCrystal(1, a4Id, a4Key, (int)parachutingList[4].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[4].transform.position.y - Constants.vert_offset, 0, c4dirt);
-                CrystalController.Instance.PickupCrystal(2, a5Id, a5Key, (int)parachutingList[5].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[5].transform.position.y - Constants.vert_offset, 0, c5dirt);
-                CrystalController.Instance.PickupCrystal(3, a0Id, a0Key, (int)parachutingList[0].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[0].transform.position.y - Constants.vert_offset, 0, c0dirt);
-                CrystalController.Instance.PickupCrystal(4, a1Id, a1Key, (int)parachutingList[1].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[1].transform.position.y - Constants.vert_offset, 0, c1dirt);
-                CrystalController.Instance.PickupCrystal(5, a2Id, a2Key, (int)parachutingList[2].transform.position.x - Constants.hor_offset, 
-                    (int)parachutingList[2].transform.position.y - Constants.vert_offset, 0, c2dirt);
+                for (int i = 0; i < GameLogic.Instance.numberOfAnimals/2; i++)
+                {
+                    CrystalController.Instance.PickupCrystal(i, crystalReturns[i+GameLogic.Instance.numberOfAnimals/2].CrystalId, 
+                        crystalReturns[i+GameLogic.Instance.numberOfAnimals/2].CrystalKey, 
+                        (int)parachutingList[i+GameLogic.Instance.numberOfAnimals/2].transform.position.x - Constants.hor_offset, 
+                        (int)parachutingList[i+GameLogic.Instance.numberOfAnimals/2].transform.position.y- Constants.vert_offset, 0, 
+                        crystalReturns[i+GameLogic.Instance.numberOfAnimals/2].SpawnDirt, -1, -1);
+                }
+                for (int i = GameLogic.Instance.numberOfAnimals/2; i < GameLogic.Instance.numberOfAnimals; i++)
+                {
+                    CrystalController.Instance.PickupCrystal(i, crystalReturns[i-GameLogic.Instance.numberOfAnimals/2].CrystalId, 
+                        crystalReturns[i-GameLogic.Instance.numberOfAnimals/2].CrystalKey, 
+                        (int)parachutingList[i-GameLogic.Instance.numberOfAnimals/2].transform.position.x - Constants.hor_offset, 
+                        (int)parachutingList[i-GameLogic.Instance.numberOfAnimals/2].transform.position.y- Constants.vert_offset, 0, 
+                        crystalReturns[i-GameLogic.Instance.numberOfAnimals/2].SpawnDirt, -1, -1);
+                }
             }
             if (GameLogic.Instance.IsPlayerOne)
             {
-                InventoryController.Instance.AddItemToInventoryVoid((int)item0, p1a0x + Constants.hor_offset, p1a0y+Constants.vert_offset);
-                InventoryController.Instance.AddItemToInventoryVoid((int)item1, p1a1x + Constants.hor_offset, p1a1y+Constants.vert_offset);
-                InventoryController.Instance.AddItemToInventoryVoid((int)item2, p1a2x + Constants.hor_offset, p1a2y+Constants.vert_offset);
+                for(int i = GameLogic.Instance.playerNum * 2; 
+                    i < GameLogic.Instance.playerNum * 2 + GameLogic.Instance.numberOfAnimals/GameLogic.Instance.numberOfPlayers; i++)
+                {
+                    CheckForCrystalReturn crystalReturn = crystalReturns[i];
+                    InventoryController.Instance.AddItemToInventoryVoid((int)crystalReturn.ItemId, 
+                        crystalReturn.X + Constants.hor_offset, 
+                        crystalReturn.Y+Constants.vert_offset);
+                }
+               // InventoryController.Instance.AddItemToInventoryVoid((int)item0, p1a0x + Constants.hor_offset, p1a0y+Constants.vert_offset);
+               // InventoryController.Instance.AddItemToInventoryVoid((int)item1, p1a1x + Constants.hor_offset, p1a1y+Constants.vert_offset);
+               // InventoryController.Instance.AddItemToInventoryVoid((int)item2, p1a2x + Constants.hor_offset, p1a2y+Constants.vert_offset);
             }
             else
             {
-                InventoryController.Instance.AddItemToInventoryVoid((int)item3, GameLogic.flipX(p2a0x) + Constants.hor_offset, GameLogic.flipY(p2a0y)+Constants.vert_offset);
-                InventoryController.Instance.AddItemToInventoryVoid((int)item4, GameLogic.flipX(p2a1x) + Constants.hor_offset, GameLogic.flipY(p2a1y)+Constants.vert_offset);
-                InventoryController.Instance.AddItemToInventoryVoid((int)item5, GameLogic.flipX(p2a2x) + Constants.hor_offset, GameLogic.flipY(p2a2y)+Constants.vert_offset);
+                for(int i = GameLogic.Instance.playerNum * 2; 
+                    i < GameLogic.Instance.playerNum * 2 + GameLogic.Instance.numberOfAnimals/GameLogic.Instance.numberOfPlayers; i++)
+                {
+                    CheckForCrystalReturn crystalReturn = crystalReturns[i];
+                    InventoryController.Instance.AddItemToInventoryVoid((int)crystalReturn.ItemId, 
+                        GameLogic.flipX(crystalReturn.X) + Constants.hor_offset, 
+                        GameLogic.flipY(crystalReturn.Y)+Constants.vert_offset);
+                }
+                //InventoryController.Instance.AddItemToInventoryVoid((int)item3, GameLogic.flipX(p2a0x) + Constants.hor_offset, GameLogic.flipY(p2a0y)+Constants.vert_offset);
+                ///InventoryController.Instance.AddItemToInventoryVoid((int)item4, GameLogic.flipX(p2a1x) + Constants.hor_offset, GameLogic.flipY(p2a1y)+Constants.vert_offset);
+                //InventoryController.Instance.AddItemToInventoryVoid((int)item5, GameLogic.flipX(p2a2x) + Constants.hor_offset, GameLogic.flipY(p2a2y)+Constants.vert_offset);
             }
             yield return new WaitForSeconds(1);
             foreach(GameObject  go in parachutingList)
